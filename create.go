@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-var numPoints int32= 1_000_000 //_000
+var numPoints int32 = 1_000_000 //_000
 
 var height = 600
 var width = 800
@@ -24,36 +24,34 @@ var paramB float64
 var paramC float64
 var paramD float64
 
-
 func CreateImage() {
 
 	//Create the point map (not a map but ok)
 	var pointMap = [][]int{}
-	pointMap=make([][]int,height)
-	
-	for i:=0; i<len(pointMap); i++{
-			pointMap[i]=make([]int,width)
+	pointMap = make([][]int, height)
+
+	for i := 0; i < len(pointMap); i++ {
+		pointMap[i] = make([]int, width)
 	}
-	
+
 	var maxPoints = 1
-	var drawnPoints=0
+	var drawnPoints = 0
 	//Generate the attractor
 
 	for i := 0; i < int(numPoints); i++ {
-		newx:= XExp.BecomeNumber()
-		vars["x"]=newx
-		newy:= YExp.BecomeNumber() 
-		vars["y"]=newy		
+		newx := XExp.BecomeNumber()
+		vars["x"] = newx
+		newy := YExp.BecomeNumber()
+		vars["y"] = newy
 
 		disx := int(newx*float64(width)*sf + float64(offx))
 		disy := int(newy*float64(height)*sf + float64(offy))
 
-		if disx<width&&disy<height&&disx>=0&&disy>=0{
+		if disx < width && disy < height && disx >= 0 && disy >= 0 {
 			pointMap[disy][disx] = pointMap[disy][disx] + 1
 			drawnPoints++
 			maxPoints = maxI(maxPoints, pointMap[disy][disx])
 		}
-	
 
 	}
 	print("Max Points: ")
@@ -103,8 +101,6 @@ func f4(x, y float64) (float64, float64) {
 	ynew := math.Cos(x*a) + d*math.Cos(y*a)
 	return xnew, ynew
 }
-
-
 
 func genCol(cola, colb color.RGBA, amt float64) color.RGBA {
 	amt = maxF(minF(amt, 1.0), 0.0)

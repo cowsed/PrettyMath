@@ -15,39 +15,12 @@ func parseExpression(inString string) EquationElement {
 	s1 := cleanUp(inString)
 	s2 := strings.ReplaceAll(s1, "  ", " ")
 	parts := strings.Split(s2, " ")
+	fmt.Println("Parts: ", parts)
 	exp := CompileExpression(parts)
-	return exp
-}
-
-func main() {
-	testString := "cos(0)"
-
-	s1 := cleanUp(testString)
-	s2 := strings.ReplaceAll(s1, "  ", " ")
-	parts := strings.Split(s2, " ")
-	fmt.Println(parts)
-	fmt.Println("====2====")
-	postfix2 := CompileExpression2(parts)
-	fmt.Println(postfix2)
-
-	fmt.Println("====3====")
-	postfix := CompileExpression3(parts)
-	fmt.Println("==fin==")
-	fmt.Println(postfix)
-	fmt.Println("out:")
-	
-	for _,o := range postfix{
-		fmt.Println(o)
-		fmt.Println("String: ",o.BecomeString())
-		fmt.Println("Output: ",o.BecomeNumber())
-	}
-	/*
-	res := parseExpression(testString)
-
-	fmt.Println(res.BecomeNumber())
-	vars["x"] = 2.0
-	fmt.Println(res.BecomeNumber())
-	*/
+	fmt.Print("Finished Compiling: ")
+	fmt.Println(exp[0])
+	fmt.Println(exp[0].BecomeString())
+	return exp[0]
 }
 
 func inMap(key string, m map[string]float64) bool {
@@ -59,48 +32,49 @@ func assembleOperator(token string, outputQueue []EquationElement) (EquationElem
 	var a EquationElement = nil
 	var b EquationElement = nil
 
-	if len(outputQueue)>0{
-		outputQueue,b=popE(outputQueue)
+	if len(outputQueue) > 0 {
+		outputQueue, b = popE(outputQueue)
 	}
-	if len(outputQueue)>0{
-		outputQueue,a=popE(outputQueue)
+	if len(outputQueue) > 0 {
+		outputQueue, a = popE(outputQueue)
 	}
 	var res EquationElement
-	res= makeOperator(token,a,b)
+	res = makeOperator(token, a, b)
 	return res, outputQueue
 }
-func makeOperator(token string, a,b EquationElement)EquationElement{
+func makeOperator(token string, a, b EquationElement) EquationElement {
 	//Function vs Operator
-	if a==nil{
+	if a == nil {
 		//Functions
-		fmt.Println("adding function")
-		switch token{			
-			case "sin":
-				return &Siner{b}
-			case "cos":
-				return &Coser{b}
-			default:
-				return b //,err
+		fmt.Println("adding function with arg: ", b)
+		switch token {
+		case "sin":
+			return &Siner{b}
+		case "cos":
+			return &Coser{b}
+		default:
+			return b //,err
 		}
 	} else {
 		//Operators
 		fmt.Println("Adding Operator")
-		switch token{
-			case "+":
-				return &Adder{a,b}
-			case "-":
-				return &Subtractor{a,b}
-			case "*":
-				return &Multiplier{a,b}
-			case "/":
-				return &Divider{a,b}
+		switch token {
+		case "+":
+			return &Adder{a, b}
+		case "-":
+			return &Subtractor{a, b}
+		case "*":
+			return &Multiplier{a, b}
+		case "/":
+			return &Divider{a, b}
 		}
 		return a //,err
 	}
-		
+
 }
 
-func CompileExpression3(tokens []string) []EquationElement {
+//A Variant of shunting car
+func CompileExpression(tokens []string) []EquationElement {
 	//0 for left 1 for right
 	var precidence map[string]int = map[string]int{"+": 2, "-": 2, "/": 3, "*": 3, "^": 15}
 	operatorStack := []string{}
@@ -108,9 +82,12 @@ func CompileExpression3(tokens []string) []EquationElement {
 
 	for index := 0; index < len(tokens); index++ {
 		token := tokens[index]
-		fmt.Println("Token: ",token)
+		fmt.Println("Token: ", token)
 		if f, err := strconv.ParseFloat(token, 64); err == nil {
 			outputQueue = append(outputQueue, &Num{f})
+		} else if len(token) == 1 && inMap(token, vars) {
+			//Variable
+			outputQueue = append(outputQueue, &Variable{token})
 		} else if token == "sin(" {
 			//Functions
 			operatorStack = append(operatorStack, "sin")
@@ -122,7 +99,7 @@ func CompileExpression3(tokens []string) []EquationElement {
 			for {
 				if len(operatorStack) > 0 {
 					topOfStack := operatorStack[len(operatorStack)-1]
-					fmt.Println("Top of stack: ",topOfStack)
+					fmt.Println("Top of stack: ", topOfStack)
 					p := precidence[topOfStack]
 					thirdOption := (p%10 == precidence[token]%10 && p < 10) && topOfStack != "("
 					if (p%10 > precidence[token]%10) || thirdOption {
@@ -130,7 +107,7 @@ func CompileExpression3(tokens []string) []EquationElement {
 						operatorStack, op = pop(operatorStack)
 						fmt.Println("in:", outputQueue)
 						var element EquationElement
-						element, outputQueue=assembleOperator(op, outputQueue)
+						element, outputQueue = assembleOperator(op, outputQueue)
 						fmt.Println("out:", outputQueue)
 						outputQueue = append(outputQueue, element)
 					} else {
@@ -149,7 +126,7 @@ func CompileExpression3(tokens []string) []EquationElement {
 				var op string
 				operatorStack, op = pop(operatorStack)
 				var element EquationElement
-				element, outputQueue=assembleOperator(op, outputQueue)
+				element, outputQueue = assembleOperator(op, outputQueue)
 				outputQueue = append(outputQueue, element)
 
 			}
@@ -165,7 +142,7 @@ func CompileExpression3(tokens []string) []EquationElement {
 					var op string
 					operatorStack, op = pop(operatorStack)
 					var element EquationElement
-					element, outputQueue=assembleOperator(op, outputQueue)
+					element, outputQueue = assembleOperator(op, outputQueue)
 					outputQueue = append(outputQueue, element)
 				}
 			}
@@ -182,8 +159,8 @@ func CompileExpression3(tokens []string) []EquationElement {
 
 		operatorStack, op = pop(operatorStack)
 		var element EquationElement
-		element,outputQueue=assembleOperator(op, outputQueue)
-		
+		element, outputQueue = assembleOperator(op, outputQueue)
+
 		fmt.Println("OutEndOp: ", operatorStack)
 		fmt.Println("InEndQ: ", outputQueue)
 
@@ -204,7 +181,7 @@ func popE(sl []EquationElement) ([]EquationElement, EquationElement) {
 
 }
 
-func CompileExpression2(tokens []string) []string {
+func ShuntingCar(tokens []string) []string {
 	//0 for left 1 for right
 	var precidence map[string]int = map[string]int{"+": 2, "-": 2, "/": 3, "*": 3, "^": 15}
 	operatorStack := []string{}
@@ -289,74 +266,6 @@ func pop(sl []string) ([]string, string) {
 
 }
 
-//2/10 needs error handling
-func CompileExpression(parts []string) EquationElement {
-	var mostRecent EquationElement = &Num{0}
-
-	fmt.Println("Equation Parts: ", parts)
-	for index := 0; index < len(parts); index++ {
-		part := parts[index]
-		fmt.Println("Encountered: ", part)
-		var element EquationElement
-		if f, err := strconv.ParseFloat(part, 64); err == nil {
-			//Regular Number
-			element = &Num{f}
-		} else if len(part) == 1 && inMap(part, vars) {
-			fmt.Println("Was a variable")
-			element = &Variable{part}
-		} else if part == "+" {
-			element = &Adder{mostRecent, nil}
-			mostRecent = element
-		} else if part == "-" {
-			element = &Subtractor{mostRecent, nil}
-			mostRecent = element
-		} else if part == "*" {
-			element = &Multiplier{mostRecent, nil}
-			mostRecent = element
-		} else if part == "/" {
-			element = &Divider{mostRecent, nil}
-			mostRecent = element
-		} else if part == "(" {
-			//Search for next ) but taking into account inner parentheses
-			subEq, endPos := findBetweenParen(parts[index+1:])
-			fmt.Println("Subeq: ", subEq, "End: ", endPos)
-			element = CompileExpression(subEq)
-			fmt.Println("Emd SubEq")
-			index += endPos + 2
-			fmt.Println("Rest: ", parts[index:])
-			index-- //cuz it goes up one next time the for loop happens
-		} else if part == "sin(" { //if is a-z count it as a variable
-			subEq, endPos := findBetweenParen(parts[index+1:])
-			fmt.Println("Subeq: ", subEq, "End: ", endPos)
-			subElements := CompileExpression(subEq)
-			fmt.Println("Emd SubEq")
-			index += endPos + 2
-			fmt.Println("Rest: ", parts[index:])
-			index-- //cuz it goes up one next time the for loop happens
-			element = &Siner{subElements}
-		} else if part == "cos(" { //if is a-z count it as a variable
-			subEq, endPos := findBetweenParen(parts[index+1:])
-			fmt.Println("Subeq: ", subEq, "End: ", endPos)
-			subElements := CompileExpression(subEq)
-			fmt.Println("Emd SubEq")
-			index += endPos + 2
-			fmt.Println("Rest: ", parts[index:])
-			index-- //cuz it goes up one next time the for loop happens
-			element = &Coser{subElements}
-		}
-
-		//Add to stack or is the most recent
-		if mostRecent.AcceptsSecond() {
-			fmt.Println("Added ", element)
-			mostRecent.AddSecond(element)
-		} else {
-			mostRecent = element
-		}
-	}
-
-	fmt.Println(mostRecent)
-	return mostRecent
-}
 func findBetweenParen(s []string) ([]string, int) {
 	paren := 1
 	for i, element := range s {
@@ -370,7 +279,6 @@ func findBetweenParen(s []string) ([]string, int) {
 		if paren == 0 {
 			fmt.Println("Found: ", s[0:i], "end: ", i)
 			return s[0:i], i
-			break
 		}
 	}
 	return []string{"AHH EROOOR"}, -1
@@ -391,7 +299,6 @@ func cleanUp(start string) string {
 			}
 			end += c
 			if i < len(start)-1 && string(start[i+1]) != " " {
-
 				end += " "
 			}
 		} else {
@@ -415,7 +322,7 @@ func (V Variable) BecomeNumber() float64 {
 	return vars[V.name]
 }
 func (V Variable) BecomeString() string {
-	return fmt.Sprint(vars[V.name])
+	return V.name
 }
 
 func (V *Variable) AcceptsSecond() bool              { return false }
@@ -430,7 +337,7 @@ func (S *Siner) BecomeNumber() float64 {
 	return math.Sin(S.a.BecomeNumber())
 }
 func (S *Siner) BecomeString() string {
-	return "sin("+S.a.BecomeString()+")"
+	return "sin(" + S.a.BecomeString() + ")"
 }
 
 func (S *Siner) AcceptsSecond() bool              { return true }
@@ -445,7 +352,7 @@ func (C *Coser) BecomeNumber() float64 {
 	return math.Cos(C.a.BecomeNumber())
 }
 func (C *Coser) BecomeString() string {
-	return "cos"+C.a.BecomeString()+")"
+	return "cos" + C.a.BecomeString() + ")"
 }
 func (C *Coser) AcceptsSecond() bool              { return true }
 func (C *Coser) AddSecond(second EquationElement) { C.a = second }
@@ -459,7 +366,7 @@ func (Add *Adder) BecomeNumber() float64 {
 	return Add.a.BecomeNumber() + Add.b.BecomeNumber()
 }
 func (Add *Adder) BecomeString() string {
-	return Add.a.BecomeString() +"+"+ Add.b.BecomeString()
+	return "(" + Add.a.BecomeString() + "+" + Add.b.BecomeString() + ")"
 }
 
 func (Add *Adder) AcceptsSecond() bool              { return true }
@@ -474,7 +381,7 @@ func (Sub *Subtractor) BecomeNumber() float64 {
 	return Sub.a.BecomeNumber() - Sub.b.BecomeNumber()
 }
 func (Sub *Subtractor) BecomeString() string {
-	return Sub.a.BecomeString() +"-"+ Sub.b.BecomeString()
+	return "(" + Sub.a.BecomeString() + "-" + Sub.b.BecomeString() + ")"
 }
 func (Sub *Subtractor) AcceptsSecond() bool              { return true }
 func (Sub *Subtractor) AddSecond(second EquationElement) { Sub.b = second }
@@ -489,7 +396,7 @@ func (Mul *Multiplier) BecomeNumber() float64 {
 	return Mul.a.BecomeNumber() * Mul.b.BecomeNumber()
 }
 func (Mul *Multiplier) BecomeString() string {
-	return Mul.a.BecomeString() +"*"+ Mul.b.BecomeString()
+	return "(" + Mul.a.BecomeString() + "*" + Mul.b.BecomeString() + ")"
 }
 
 func (Mul *Multiplier) AcceptsSecond() bool              { return true }
@@ -504,7 +411,7 @@ func (Div *Divider) BecomeNumber() float64 {
 	return Div.a.BecomeNumber() / Div.b.BecomeNumber()
 }
 func (Div *Divider) BecomeString() string {
-	return Div.a.BecomeString() + "/" + Div.b.BecomeString()
+	return "(" + Div.a.BecomeString() + "/" + Div.b.BecomeString() + ")"
 }
 func (Div *Divider) AcceptsSecond() bool              { return true }
 func (Div *Divider) AddSecond(second EquationElement) { Div.b = second }
