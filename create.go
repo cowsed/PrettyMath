@@ -7,6 +7,8 @@ import (
 	"image/png"
 	"math"
 	"os"
+	
+	ep "./ExpressionParser"
 )
 
 var numPoints int32 = 1_000_000 //_000
@@ -24,6 +26,8 @@ var paramB float64
 var paramC float64
 var paramD float64
 
+var colors []color.RGBA
+
 func CreateImage() {
 
 	//Create the point map (not a map but ok)
@@ -40,9 +44,10 @@ func CreateImage() {
 
 	for i := 0; i < int(numPoints); i++ {
 		newx := XExp.BecomeNumber()
-		vars["x"] = newx
 		newy := YExp.BecomeNumber()
-		vars["y"] = newy
+
+ep.Vars["x"] = newx
+		ep.Vars["y"] = newy
 
 		disx := int(newx*float64(width)*sf + float64(offx))
 		disy := int(newy*float64(height)*sf + float64(offy))
@@ -77,14 +82,6 @@ func CreateImage() {
 }
 
 func lerpColors(amt float64) color.RGBA {
-	colors := [2]color.RGBA{}
-	//{60, 12, 48, 0xff}//
-	//{235, 143, 34, 0xff}//
-	colors[0] = color.RGBA{219, 58, 52, 0xff} //{210, 220, 222, 0xff}
-	colors[1] = color.RGBA{50, 48, 49, 0xff}  //{60,110,95,0xff}
-	//colors[2] = color.RGBA{140,30,45,0xff}
-	//colors[3]=color.RGBA{80,50,65,0xff}
-	//if (amt>1){println("panic")}
 	amtI := minI(int(float64(len(colors))*amt), len(colors)-2)
 	c := genCol(colors[amtI], colors[amtI+1], (float64(len(colors))*amt)-float64(amtI))
 	return c
