@@ -1,23 +1,30 @@
 package main
 
+
+//MOVING THE FRADIENT TO THE OTHER PACKAGE CAUSES GETCOLORAT TO FAIL I THINK
+//MAKING AND SHOWING THE WIDGET AND GENERATING THE preview works tho
+
+
 import (
 	"fmt"
 	g "github.com/AllenDang/giu"
-
 	"image"
 	//"image/color"
 	"strconv"
 	//"errors"
 
 	ep "./ExpressionParser"
+	"./Tools"
+	
 )
 
 var (
 	texture *g.Texture
 )
 
-var localGradientEditor GradientEditorWidget
-var colGradient Gradient
+
+
+var nthRoot float32 = 2
 
 var NewWindowOpen = true
 var Attractor2DOpen = true
@@ -25,11 +32,6 @@ var Attractor2DOpen = true
 var connectPoints = false
 
 var autoUpdate bool = false
-
-var testCol [3]float32
-var testCol2 [3]float32
-var testCol3 [3]float32
-var testCol4 [3]float32
 
 var aString string = "0.65343"
 var bString string = "0.7345345"
@@ -95,7 +97,6 @@ func updateParams() {
 	XExpRep = XExp.BecomeString()
 	YExpRep = YExp.BecomeString()
 
-	colors = makeColors()
 }
 
 func UpdateImage() {
@@ -115,12 +116,11 @@ func ExpandAll() {
 }
 
 func loop() {
-	localGradientEditor=GradientEditor("Gradient", &colGradient, 0)
+	localGradientEditor = tools.GradientEditor("Gradient", &colGradient, 0)
 	localGradientEditor.UpdateTex()
-	
+
 	//Reset list of color Pickers (probably not the best way to do this)
-	pickers = nil
-	//Ensure the new window dialog is open
+//Ensure the new window dialog is open
 	NewWindowOpen = true
 	fullcanvas := g.Layout{
 		g.Custom(func() {
@@ -175,12 +175,9 @@ func loop() {
 		g.Separator(),
 		//g.CustomWidget{imgui.ColorPicker3("Color1Picker",&testCol, 0)}),
 		g.TreeNode("Colors").Layout(
-			ColorPicker("First", &testCol, 0),
-			//ColorPicker("Second", &testCol2, 0),
-			//ColorPicker("Third", &testCol3, 0),
-			//ColorPicker("Fourth", &testCol4, 0),
+			g.InputFloat("nthRt(points)", &nthRoot), g.Tooltip("n for the nth root of normalized points in a pixel"),
+			localGradientEditor,
 		),
-		localGradientEditor,
 	)
 
 	g.SingleWindow("Images").Layout(

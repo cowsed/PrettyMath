@@ -1,15 +1,18 @@
 package main
 
 import (
-	_ "fmt"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
 	"os"
-
+	"./Tools"
 	ep "./ExpressionParser"
 )
+
+var localGradientEditor tools.GradientEditorWidget
+var colGradient tools.Gradient
 
 var numPoints int32 = 1_000_000 //_000
 
@@ -26,17 +29,17 @@ var paramB float64
 var paramC float64
 var paramD float64
 
-var colors []color.RGBA
-
+func inMap(key [2]int, m map[[2]int]int) bool {
+	_, in := m[key]
+	return in
+}
 func CreateImage() {
 
 	//Create the point map (not a map but ok)
-	var pointMap = [][]int{}
-	pointMap = make([][]int, height)
-
-	for i := 0; i < len(pointMap); i++ {
-		pointMap[i] = make([]int, width)
-	}
+	//var pointMap = [][]int{}
+	mapKeys:=[][2]int{}
+	pointMap :=make(map[[2]int]int)// make([][]int, height)
+	
 
 	var maxPoints = 1
 	var drawnPoints = 0
@@ -53,9 +56,14 @@ func CreateImage() {
 		disy := int(newy*float64(height)*sf + float64(offy))
 
 		if disx < width && disy < height && disx >= 0 && disy >= 0 {
-			pointMap[disy][disx] = pointMap[disy][disx] + 1
+			if inMap([2]int{disx,disy}, pointMap){
+				pointMap[[2]int{disx,disy}] = pointMap[[2]int{disx,disy}]+ 1
+			} else {
+				pointMap[[2]int{disx,disy}] = 1
+				mapKeys=append(mapKeys, [2]int{disx,disy})
+			}
 			drawnPoints++
-			maxPoints = maxI(maxPoints, pointMap[disy][disx])
+			maxPoints = maxI(maxPoints, pointMap[[2]int{disx,disy}])
 		}
 
 	}
@@ -63,17 +71,29 @@ func CreateImage() {
 	println(maxPoints)
 	print("Points Drawn: ")
 	println(drawnPoints)
+	print("Individual Points: ")
+	fmt.Println(len(mapKeys))
+	print("Possible Points: ")
+	fmt.Println(width*height)
+	
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
 
 	img := image.NewRGBA(image.Rectangle{upLeft, lowRight})
+	fmt.Println("Gradient: ", colGradient)
+	fmt.Println("GradienttEST: ", colGradient.GetColorAt(0))
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
-
-			amt := float64(pointMap[y][x]) / float64(maxPoints)
-			amt = math.Pow(amt, 1.0/2)
-			newCol := colGradient.GetColorAt(amt) //lerpColors(amt)
+			var amt float64 =0
+			if inMap([2]int{x,y}, pointMap){
+				amt = float64(pointMap[[2]int{x,y}]) / float64(maxPoints)			
+			} else {
+				amt=0
+			}
+			amt = math.Pow(amt, 1.0/float64(nthRoot))
+			newCol := colGradient.GetColorAt(amt) 
+			
 			img.Set(x, y, newCol)
 		}
 	}
@@ -124,9 +144,6 @@ func maxF(a, b float64) float64 {
 	}
 }
 
-func lerp(a, b uint8, amt float64) uint8 {
-	return uint8(float64(a)*(amt) + float64(b)*(1-amt))
-}
 func mult(a, b uint8) uint8 {
 	return uint8((float64(a) / 255) * (float64(b) / 255) * 255)
 }

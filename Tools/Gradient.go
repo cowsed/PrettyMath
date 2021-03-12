@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"fmt"
@@ -86,6 +86,10 @@ func lerpColor(cola, colb color.RGBA, amt float64) color.RGBA {
 	b := lerp(cola.B, colb.B, amt)
 	a := lerp(cola.A, colb.A, amt)
 	return color.RGBA{r, g, b, a}
+}
+
+func lerp(a, b uint8, amt float64) uint8 {
+	return uint8(float64(a)*(amt) + float64(b)*(1-amt))
 }
 
 //Sets the color of the tick at the index specified
@@ -216,10 +220,3 @@ func colFromArr(arr [3]float32) color.RGBA {
 	return color.RGBA{uint8(arr[0] * 255), uint8(arr[1] * 255), uint8(arr[2] * 255), 0xff}
 }
 
-func makeColors() []color.RGBA { //,err
-	cols := []color.RGBA{}
-	for _, p := range pickers {
-		cols = append(cols, p.GetColor())
-	}
-	return cols //,err if there are no colors
-}
