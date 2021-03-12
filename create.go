@@ -73,7 +73,7 @@ ep.Vars["x"] = newx
 
 			amt := float64(pointMap[y][x]) / float64(maxPoints)
 			amt = math.Pow(amt, 1.0/2)
-			newCol := lerpColors(amt)
+			newCol := colGradient.GetColorAt(amt)//lerpColors(amt)
 			img.Set(x, y, newCol)
 		}
 	}
@@ -81,11 +81,6 @@ ep.Vars["x"] = newx
 	png.Encode(f, img)
 }
 
-func lerpColors(amt float64) color.RGBA {
-	amtI := minI(int(float64(len(colors))*amt), len(colors)-2)
-	c := genCol(colors[amtI], colors[amtI+1], (float64(len(colors))*amt)-float64(amtI))
-	return c
-}
 
 func f4(x, y float64) (float64, float64) {
 
@@ -99,15 +94,7 @@ func f4(x, y float64) (float64, float64) {
 	return xnew, ynew
 }
 
-func genCol(cola, colb color.RGBA, amt float64) color.RGBA {
-	amt = maxF(minF(amt, 1.0), 0.0)
 
-	r := lerp(cola.R, colb.R, amt)
-	g := lerp(cola.G, colb.G, amt)
-	b := lerp(cola.B, colb.B, amt)
-	a := lerp(cola.A, colb.A, amt)
-	return color.RGBA{r, g, b, a}
-}
 
 func min(a, b uint8) uint8 {
 	if a < b {

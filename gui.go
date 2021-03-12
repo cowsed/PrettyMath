@@ -8,13 +8,16 @@ import (
 	//"image/color"
 	"strconv"
 	//"errors"
-	
+
 	ep "./ExpressionParser"
 )
 
 var (
 	texture *g.Texture
 )
+
+var localGradientEditor GradientEditorWidget
+var colGradient Gradient
 
 var NewWindowOpen = true
 var Attractor2DOpen = true
@@ -91,8 +94,8 @@ func updateParams() {
 
 	XExpRep = XExp.BecomeString()
 	YExpRep = YExp.BecomeString()
-	
-	colors=makeColors()
+
+	colors = makeColors()
 }
 
 func UpdateImage() {
@@ -112,8 +115,11 @@ func ExpandAll() {
 }
 
 func loop() {
+	localGradientEditor=GradientEditor("Gradient", &colGradient, 0)
+	localGradientEditor.UpdateTex()
+	
 	//Reset list of color Pickers (probably not the best way to do this)
-	pickers=nil
+	pickers = nil
 	//Ensure the new window dialog is open
 	NewWindowOpen = true
 	fullcanvas := g.Layout{
@@ -129,17 +135,18 @@ func loop() {
 		}),
 	}
 	parameterInput := g.Group().Layout(
-	
+
 		g.Separator(),
 		g.TreeNode("Parameters").Layout(
 			g.InputText("A", &aString).OnChange(UpdateImage), g.Tooltip("Parameter a"),
 			g.InputText("B", &bString).OnChange(UpdateImage), g.Tooltip("Parameter b"),
 			g.InputText("C", &cString).OnChange(UpdateImage), g.Tooltip("Parameter c"),
 			g.InputText("D", &dString).OnChange(UpdateImage), g.Tooltip("Parameter d"),
+			g.Separator(),
 			//Initial x,y s
 			g.InputText("X0", &x0Str), g.Tooltip("Initial X Value"),
 			g.InputText("Y0", &y0Str), g.Tooltip("Initial Y Value"),
-			g.Checkbox("Connect Points", &connectPoints),g.Tooltip("If true, connects all the points with lines(but not now bc i havent gotten there yet)"),
+			g.Checkbox("Connect Points", &connectPoints), g.Tooltip("If true, connects all the points with lines(but not now bc i havent gotten there yet)"),
 			g.Separator(),
 		).Flags(g.TreeNodeFlagsFramed), g.Tooltip("The paramaters for the equations"),
 		g.Separator(),
@@ -168,23 +175,25 @@ func loop() {
 		g.Separator(),
 		//g.CustomWidget{imgui.ColorPicker3("Color1Picker",&testCol, 0)}),
 		g.TreeNode("Colors").Layout(
-		ColorPicker("First", &testCol, 0),
-		ColorPicker("Second", &testCol2, 0),
-		ColorPicker("Third", &testCol3, 0),
-		ColorPicker("Fourth", &testCol4, 0),
+			ColorPicker("First", &testCol, 0),
+			//ColorPicker("Second", &testCol2, 0),
+			//ColorPicker("Third", &testCol3, 0),
+			//ColorPicker("Fourth", &testCol4, 0),
 		),
-)
+		localGradientEditor,
+	)
 
 	g.SingleWindow("Images").Layout(
 		g.TabBar("TabBar").Layout(
 			g.TabItem("2D Attractors").Layout(
+				g.Line(
+					g.Button("Regenerate").OnClick(CreateLoadImage), g.Tooltip("Regenerate Image"),
+					g.Checkbox("Auto-update", &autoUpdate), g.Tooltip("Update On Parameter Change"),
+					g.Button("Expand All").OnClick(ExpandAll), g.Tooltip("Expand all parameter windows"),
+				),
 				g.SplitLayout("MainSplit", g.DirectionHorizontal, true, 300,
 					g.Layout{
-						g.Line(
-							g.Button("Regenerate").OnClick(CreateLoadImage), g.Tooltip("Regenerate Image"),
-							g.Checkbox("Auto-update", &autoUpdate), g.Tooltip("Update On Parameter Change"),
-							g.Button("Expand All").OnClick(ExpandAll), g.Tooltip("Expand all parameter windows"),
-						),
+
 						parameterInput,
 					},
 					fullcanvas,
@@ -195,11 +204,12 @@ func loop() {
 			),
 		),
 	)
+	fmt.Println(colGradient)
 }
 
-
-
 func main() {
+	colGradient.Init()
+
 	wnd := g.NewMasterWindow("Fun Graphics Stuff", 1200, 800, 0, nil)
 
 	loadImage()
