@@ -9,6 +9,7 @@ import (
 	"sort"
 )
 
+
 type Gradient struct {
 	ticks []GradientTick //This must be insured to be in order of position
 }
@@ -17,12 +18,13 @@ type GradientTick struct {
 	color color.RGBA
 }
 
+
 func (g *Gradient) Init() {
-	//When return see if this is failing to initialize array and store it back or if its the display that doesnt work
+	
 	//Sets two values black at 0, white at 1
 	g.AddTick(0.0, color.RGBA{0, 0, 0, 0xff})
-	g.AddTick(0.5, color.RGBA{0, 0, 255, 0xff})
-	g.AddTick(1.0, color.RGBA{255, 255, 255, 0xff})
+	g.AddTick(0.3, color.RGBA{255, 0, 255, 0xff})
+	g.AddTick(0.6, color.RGBA{255, 255, 255, 0xff})
 }
 
 //Get the color at a position
@@ -99,20 +101,16 @@ func (g *Gradient) AddTick(pos float64, color color.RGBA) {
 }
 
 func (g *Gradient) makePreview() *image.RGBA {
-	fmt.Println(",aking preview")
+	//Horizontal resolution of the preview
 	previewSize := 20
-
 	pixels := []uint8{}
-
 	for i := 0; i <= previewSize; i++ {
 		amt := float64(i) / float64(previewSize)
 		col := g.GetColorAt(amt)
 		r, g, b, a := col.RGBA()
 		pixels = append(pixels, []uint8{uint8(r), uint8(g), uint8(b), uint8(a)}...)
 	}
-	fmt.Println("pixels: ", pixels)
 	img := image.RGBA{pixels, 1, image.Rectangle{image.Point{0, 0}, image.Point{len(pixels) / 4, 1}}}
-
 	return &img
 }
 
@@ -135,10 +133,44 @@ func GradientEditor(id string, gradient *Gradient, flags int) GradientEditorWidg
 	g.UpdateTex()
 	return g
 }
-
+func p2V2(p image.Point) imgui.Vec2{
+	return imgui.Vec2{float32(p.X),float32(p.Y)}
+}
 func (gr GradientEditorWidget) Build() {
+	//w,h:=
+	var availableWidth float32 =100.0
 	imgui.Text("Gradient")
-	imgui.ImageButton(gr.previewTexID, imgui.Vec2{100, 10})
+	p:=giu.GetCursorScreenPos()
+
+	imgui.ImageButton(gr.previewTexID, imgui.Vec2{availableWidth, 10})
+	drawList:=imgui.GetWindowDrawList()
+	
+	tickHeight:=14
+	tickBgCol:=giu.ToVec4Color(color.RGBA{uint8(28),uint8(36),uint8(43),uint8(0xff)})
+	//imgui.Vec4{1,0,0,1}//
+	tickBorder:=2
+	topOffset:=10
+	tickSize:=imgui.Vec2{float32(tickBorder*2+topOffset), float32(tickHeight+topOffset+tickBorder*2)}
+	for i,t := range(gr.grad.ticks){
+		col:=giu.ToVec4Color(t.color)
+		pos:=float32(t.pos)*availableWidth
+		
+		pmin:=p.Add(image.Point{int(pos)-tickBorder,10-tickBorder})
+		pmax:=p.Add(image.Point{10+int(pos)+tickBorder,tickHeight+10+tickBorder})
+		drawList.AddRectFilled(p2V2(pmin), p2V2(pmax), tickBgCol,0,5)
+	
+		pmin2:=p.Add(image.Point{int(pos),10})
+		pmax2:=p.Add(image.Point{10+int(pos),tickHeight+10})
+		drawList.AddRectFilled(p2V2(pmin2), p2V2(pmax2), col,0,5)
+		
+		imgui.SetCursorScreenPos(p2V2( p.Add(image.Point{int(availableWidth*float32(t.pos)),0} ) ))
+		if imgui.ButtonV("ButtonX"+string(i), tickSize){
+			fmt.Println("clicked: ",i)
+		}
+		if imgui.IsItemHovered(){
+			fmt.Println("Hovered")
+		}
+	}
 }
 func (gr *GradientEditorWidget) UpdateTex() {
 	renderer := giu.Context.GetRenderer()

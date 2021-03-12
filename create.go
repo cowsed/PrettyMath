@@ -7,7 +7,7 @@ import (
 	"image/png"
 	"math"
 	"os"
-	
+
 	ep "./ExpressionParser"
 )
 
@@ -46,7 +46,7 @@ func CreateImage() {
 		newx := XExp.BecomeNumber()
 		newy := YExp.BecomeNumber()
 
-ep.Vars["x"] = newx
+		ep.Vars["x"] = newx
 		ep.Vars["y"] = newy
 
 		disx := int(newx*float64(width)*sf + float64(offx))
@@ -73,28 +73,13 @@ ep.Vars["x"] = newx
 
 			amt := float64(pointMap[y][x]) / float64(maxPoints)
 			amt = math.Pow(amt, 1.0/2)
-			newCol := colGradient.GetColorAt(amt)//lerpColors(amt)
+			newCol := colGradient.GetColorAt(amt) //lerpColors(amt)
 			img.Set(x, y, newCol)
 		}
 	}
 	f, _ := os.Create("out.png")
 	png.Encode(f, img)
 }
-
-
-func f4(x, y float64) (float64, float64) {
-
-	a := paramA
-	b := paramB
-	c := paramC
-	d := paramD
-
-	xnew := math.Cos(y*b) + c*math.Cos(x*b)
-	ynew := math.Cos(x*a) + d*math.Cos(y*a)
-	return xnew, ynew
-}
-
-
 
 func min(a, b uint8) uint8 {
 	if a < b {
