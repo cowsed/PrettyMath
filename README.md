@@ -1,6 +1,6 @@
 # Fancy Math things
-![Most Recent](https://github.com/cowsed/FancyMath/blob/main/out.png?raw=true)
-![Made a while ago](https://github.com/cowsed/FancyMath/blob/main/image.png?raw=true)
+![Most Recent](https://github.com/cowsed/PrettyMath/blob/main/out.png?raw=true)
+![Made a while ago](https://github.com/cowsed/PrettyMath/blob/main/image.png?raw=true)
 
 
 For now just a way of doing 2D attractors in the form of
