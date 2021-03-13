@@ -1,21 +1,22 @@
-package attractor2D //main
+package attractor2d
 
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"image/png"
 	"math"
 	"os"
-	//"../../Tools"
 )
 
+//Helper function that is probably ineffecient but makes the code a bit easier to read/write
 func inMap(key [2]int, m map[[2]int]int) bool {
 	_, in := m[key]
 	return in
 }
 
-func (ws *Attractor2DWorkspace) CreateImage() {
+//CreateImage remakes the plotted points and the image
+//In the future separate the plotting of points into the map and rendering that to an image so that color editing can be done faster
+func (ws *Workspace) CreateImage() {
 
 	//Create the point map (not a map but ok)
 	//var pointMap = [][]int{}
@@ -79,63 +80,16 @@ func (ws *Attractor2DWorkspace) CreateImage() {
 	png.Encode(f, img)
 }
 
-func min(a, b uint8) uint8 {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
-func max(a, b uint8) uint8 {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
 func minI(a, b int) int {
 	if a < b {
 		return a
-	} else {
-		return b
 	}
+	return b
+
 }
 func maxI(a, b int) int {
 	if a > b {
 		return a
-	} else {
-		return b
 	}
-}
-func minF(a, b float64) float64 {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
-func maxF(a, b float64) float64 {
-	if a > b {
-		return a
-	} else {
-		return b
-	}
-}
-
-func mult(a, b uint8) uint8 {
-	return uint8((float64(a) / 255) * (float64(b) / 255) * 255)
-}
-
-func add(a, b uint8) uint8 {
-	return min(uint8((float64(a)*.2 + float64(b))), 255)
-}
-
-func Add(cola, colb color.RGBA) color.RGBA {
-
-	r := add(cola.R, colb.R)
-	g := add(cola.G, colb.G)
-	b := add(cola.B, colb.B)
-	a := add(cola.A, colb.A)
-
-	return color.RGBA{r, g, b, a}
+	return b
 }

@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func ParseExpression(inString string, Vars map[string]float64) EquationElement {
+//ParseExpression takes in a string, cleans it, tokenizes it and converts it to a calculatable structure of ExpressionElements
+func ParseExpression(inString string, Vars map[string]float64) ExpressionElement {
 	s1 := cleanUp(inString)
 	s2 := strings.ReplaceAll(s1, "  ", " ")
 	parts := strings.Split(s2, " ")
@@ -24,10 +25,10 @@ func inMap(key string, m map[string]float64) bool {
 	_, in := m[key]
 	return in
 }
-func assembleOperator(token string, outputQueue []EquationElement) (EquationElement, []EquationElement) {
+func assembleOperator(token string, outputQueue []ExpressionElement) (ExpressionElement, []ExpressionElement) {
 	//Stick together elements into biger element
-	var a EquationElement = nil
-	var b EquationElement = nil
+	var a ExpressionElement = nil
+	var b ExpressionElement = nil
 
 	var isFunction = false
 	if strings.Contains(token, "(") {
@@ -47,11 +48,11 @@ func assembleOperator(token string, outputQueue []EquationElement) (EquationElem
 		}
 
 	}
-	var res EquationElement
+	var res ExpressionElement
 	res = makeOperator(token, a, b)
 	return res, outputQueue
 }
-func makeOperator(token string, a, b EquationElement) EquationElement {
+func makeOperator(token string, a, b ExpressionElement) ExpressionElement {
 	//Function vs Operator
 	fmt.Println("OPERATOR? ", token)
 	if strings.Contains(token, "(") {
@@ -85,11 +86,11 @@ func makeOperator(token string, a, b EquationElement) EquationElement {
 }
 
 //A Variant of shunting car
-func compileExpression(tokens []string, Vars map[string]float64) []EquationElement {
+func compileExpression(tokens []string, Vars map[string]float64) []ExpressionElement {
 	//0 for left 1 for right
 	var precidence map[string]int = map[string]int{"+": 2, "-": 2, "/": 3, "*": 3, "^": 14, "f(": 1}
 	operatorStack := []string{}
-	outputQueue := []EquationElement{}
+	outputQueue := []ExpressionElement{}
 
 	for index := 0; index < len(tokens); index++ {
 		token := tokens[index]
@@ -145,7 +146,7 @@ func compileExpression(tokens []string, Vars map[string]float64) []EquationEleme
 						var op string
 						operatorStack, op = pop(operatorStack)
 						//fmt.Println("in:", outputQueue)
-						var element EquationElement
+						var element ExpressionElement
 						element, outputQueue = assembleOperator(op, outputQueue)
 						//fmt.Println("out:", outputQueue)
 						outputQueue = append(outputQueue, element)
@@ -180,7 +181,7 @@ func compileExpression(tokens []string, Vars map[string]float64) []EquationEleme
 
 				var op string
 				operatorStack, op = pop(operatorStack)
-				var element EquationElement
+				var element ExpressionElement
 				element, outputQueue = assembleOperator(op, outputQueue)
 				outputQueue = append(outputQueue, element)
 
@@ -197,7 +198,7 @@ func compileExpression(tokens []string, Vars map[string]float64) []EquationEleme
 					fmt.Println("Ending Function: ", op)
 					var op string
 					operatorStack, op = pop(operatorStack)
-					var element EquationElement
+					var element ExpressionElement
 					element, outputQueue = assembleOperator(op, outputQueue)
 					outputQueue = append(outputQueue, element)
 				}
@@ -222,7 +223,7 @@ func compileExpression(tokens []string, Vars map[string]float64) []EquationEleme
 		//fmt.Println("InEndQ: ", outputQueue)
 
 		operatorStack, op = pop(operatorStack)
-		var element EquationElement
+		var element ExpressionElement
 		element, outputQueue = assembleOperator(op, outputQueue)
 
 		//fmt.Println("OutEndOp: ", operatorStack)
@@ -242,7 +243,9 @@ func compileExpression(tokens []string, Vars map[string]float64) []EquationEleme
 
 	return outputQueue
 }
-func popE(sl []EquationElement) ([]EquationElement, EquationElement) {
+
+//Helper popping functionns to make writing a bit easier - needs reslicing which is apparently bad but whatever
+func popE(sl []ExpressionElement) ([]ExpressionElement, ExpressionElement) {
 	if len(sl) > 0 {
 		res := sl[len(sl)-1]
 		sl = sl[:len(sl)-1]
@@ -250,83 +253,6 @@ func popE(sl []EquationElement) ([]EquationElement, EquationElement) {
 	}
 	return sl, nil
 
-}
-
-//Actually just shunting car
-func ShuntingCar(tokens []string) []string {
-	//0 for left 1 for right
-	var precidence map[string]int = map[string]int{"+": 2, "-": 2, "/": 3, "*": 3, "^": 15}
-	operatorStack := []string{}
-	outputQueue := []string{}
-
-	for index := 0; index < len(tokens); index++ {
-		token := tokens[index]
-		if _, err := strconv.ParseFloat(token, 64); err == nil {
-			outputQueue = append(outputQueue, token) // &Num{f})
-		} else if token == "sin(" {
-			//Functions
-			operatorStack = append(operatorStack, "sin(")
-		} else if token == "cos(" {
-			//Functions
-			operatorStack = append(operatorStack, "sin")
-		} else if token == "+" || token == "-" || token == "*" || token == "/" || token == "^" {
-			//Precidence and associativity of the top on stack token
-			for {
-				if len(operatorStack) > 0 {
-					topOfStack := operatorStack[len(operatorStack)-1]
-					p := precidence[topOfStack]
-					thirdOption := (p%10 == precidence[token]%10 && p < 10) && topOfStack != "("
-					if (p%10 > precidence[token]%10) || thirdOption {
-						var op string
-						operatorStack, op = pop(operatorStack)
-						outputQueue = append(outputQueue, op)
-					} else {
-						break
-					}
-				} else {
-					break
-				}
-			}
-			fmt.Println("adding token", token)
-			operatorStack = append(operatorStack, token)
-		} else if token == "(" {
-			operatorStack = append(operatorStack, token)
-		} else if token == ")" {
-			for len(operatorStack) > 0 && operatorStack[len(operatorStack)-1] != "(" {
-				var op string
-				operatorStack, op = pop(operatorStack)
-				outputQueue = append(outputQueue, op)
-
-			}
-			//while the operator at the top of the operator stack is not a left parenthesis:
-			/* If the stack runs out without finding a left parenthesis, then there are mismatched parentheses. */
-			if len(operatorStack) > 0 && operatorStack[len(operatorStack)-1] == "(" {
-				operatorStack, _ = pop(operatorStack)
-			}
-
-			if len(operatorStack) > 0 {
-				op := operatorStack[len(operatorStack)-1]
-				if op == "sin(" || op == "cos(" {
-					var op string
-					operatorStack, op = pop(operatorStack)
-					outputQueue = append(outputQueue, op)
-				}
-			}
-			//if there is a function token at the top of the operator stack, then:
-			//    pop the function from the operator stack onto the output queue.
-		}
-
-	}
-	for len(operatorStack) > 0 {
-
-		var op string
-		operatorStack, op = pop(operatorStack)
-		fmt.Println(operatorStack)
-		outputQueue = append(outputQueue, op)
-
-	}
-
-	return outputQueue
 }
 func pop(sl []string) ([]string, string) {
 	if len(sl) > 0 {
@@ -338,6 +264,7 @@ func pop(sl []string) ([]string, string) {
 
 }
 
+//Cleans the string and separates it into an easily tokenizable form
 func cleanUp(start string) string {
 	end := ""
 	for i, r := range start {
@@ -362,110 +289,138 @@ func cleanUp(start string) string {
 	return end
 }
 
-type EquationElement interface {
+//ExpressionElement is an interface for part of a expression
+//In the future also have a better way to register this one of these into the parser
+type ExpressionElement interface {
 	BecomeNumber(map[string]float64) float64
 	BecomeString() string
 }
 
-func toStringNice(a EquationElement) string {
+//becomes a string but doesnt error if its nli - mostly for debugging
+func toStringNice(a ExpressionElement) string {
 	if a == nil {
 		return "{nil}"
-	} else {
-		return a.BecomeString()
 	}
+	return a.BecomeString()
+
 }
 
+//Variable is an ExpressionElement that references a variable map when called upon to calculate
 type Variable struct {
 	name string
 }
 
+//BecomeNumber causes this to calculate itself
 func (V Variable) BecomeNumber(Vars map[string]float64) float64 {
 	return Vars[V.name]
 }
+
+//BecomeString creates a string representation of this element and its children
 func (V Variable) BecomeString() string {
 	return V.name
 }
 
-//The Siner
+//Siner is an ExpressionElement that returns the sine of its sub element
 type Siner struct {
-	a EquationElement
+	a ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (S *Siner) BecomeNumber(Vars map[string]float64) float64 {
 	return math.Sin(S.a.BecomeNumber(Vars))
 }
+
+//BecomeString creates a string representation of this element and its children
 func (S *Siner) BecomeString() string {
 	return "sin(" + toStringNice(S.a) + ")"
 }
 
-//The Coser
+//Coser is an ExpressionElement that returns the cosine of its sub element
 type Coser struct {
-	a EquationElement
+	a ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (C *Coser) BecomeNumber(Vars map[string]float64) float64 {
 	return math.Cos(C.a.BecomeNumber(Vars))
 }
+
+//BecomeString creates a string representation of this element and its children
 func (C *Coser) BecomeString() string {
 	return "cos(" + toStringNice(C.a) + ")"
 }
 
-//The Adder
+//Adder adds its two sub elements
 type Adder struct {
-	a, b EquationElement
+	a, b ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (Add *Adder) BecomeNumber(Vars map[string]float64) float64 {
 	return Add.a.BecomeNumber(Vars) + Add.b.BecomeNumber(Vars)
 }
+
+//BecomeString creates a string representation of this element and its children
 func (Add *Adder) BecomeString() string {
 	return "(" + toStringNice(Add.a) + "+" + toStringNice(Add.b) + ")"
 }
 
-//The Subtractor
+//Subtractor subtracts its two sub elements
 type Subtractor struct {
-	a, b EquationElement
+	a, b ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (Sub *Subtractor) BecomeNumber(Vars map[string]float64) float64 {
 	return Sub.a.BecomeNumber(Vars) - Sub.b.BecomeNumber(Vars)
 }
+
+//BecomeString creates a string representation of this element and its children
 func (Sub *Subtractor) BecomeString() string {
 	return "(" + toStringNice(Sub.a) + "-" + toStringNice(Sub.b) + ")"
 }
 
-//The Multiplier
+//Multiplier multiplies its two sub elements
 type Multiplier struct {
-	a, b EquationElement
+	a, b ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (Mul *Multiplier) BecomeNumber(Vars map[string]float64) float64 {
 	return Mul.a.BecomeNumber(Vars) * Mul.b.BecomeNumber(Vars)
 }
+
+//BecomeString creates a string representation of this element and its children
 func (Mul *Multiplier) BecomeString() string {
 	return "(" + toStringNice(Mul.a) + "*" + toStringNice(Mul.b) + ")"
 }
 
-//The Divider
+//Divider divides its two sub elements
 type Divider struct {
-	a, b EquationElement
+	a, b ExpressionElement
 }
 
+//BecomeNumber causes this to calculate itself
 func (Div *Divider) BecomeNumber(Vars map[string]float64) float64 {
 	return Div.a.BecomeNumber(Vars) / Div.b.BecomeNumber(Vars)
 }
+
+//BecomeString creates a string representation of this element and its children
 func (Div *Divider) BecomeString() string {
 	return "(" + toStringNice(Div.a) + "/" + toStringNice(Div.b) + ")"
 }
 
-//Base Number
+//Num is just a constant number
 type Num struct {
 	n float64
 }
 
+//BecomeNumber causes this to calculate itself
 func (n *Num) BecomeNumber(Vars map[string]float64) float64 {
 	return n.n
 }
+
+//BecomeString creates a string representation of this element and its children
 func (n *Num) BecomeString() string {
 	return fmt.Sprint(n.n)
 }

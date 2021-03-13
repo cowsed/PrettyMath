@@ -1,56 +1,23 @@
-package attractor2D
+package attractor2d
 
 import (
 	"fmt"
-	g "github.com/AllenDang/giu"
 	"image"
 	"strconv"
 
 	ep "../../ExpressionParser"
 	"../../Tools"
+	g "github.com/AllenDang/giu"
 )
 
-func Init() Attractor2DWorkspace {
-	gradient := tools.Gradient{}
-	gradient.Init()
-
-	return Attractor2DWorkspace{
-		amOpen:        true,
-		connectPoints: false,
-		autoUpdate:    false,
-		numPoints:     1_000_000,
-		aString:       "0.65343",
-		bString:       "0.7345345",
-		cString:       "1.3",
-		dString:       "1.4",
-		gradient:      gradient,
-
-		x0Str:       "0.1",
-		y0Str:       "0.1",
-		scaleFactor: 0.1,
-		offxPer:     0.5,
-		offyPer:     0.5,
-
-		XExpStr: "sin(x*y/b)*y+cos(a*x-y)",
-		YExpStr: "x+sin(y)/b",
-
-		XExpRep: "--Regenerate to show compiled equation--",
-		YExpRep: "--Regenerate to show compiled equation--",
-
-		nthRoot:      2,
-		imageWidth:   1366,
-		imageHeight:  768,
-		displayScale: 0.75,
-	}
-}
-
-type Attractor2DWorkspace struct {
+//Workspace is the workspace for generating 2-dimensional Attracors
+type Workspace struct {
 	//General Settings
 	amOpen        bool //should be true usually
 	connectPoints bool //= false
 	autoUpdate    bool //= false
 	numPoints     int32
-
+	onClose       func()
 	//Parameters
 	//Editor Versions
 	aString string //= "0.65343"
@@ -100,8 +67,44 @@ type Attractor2DWorkspace struct {
 
 }
 
+//Init creates a new 2d attractor workspace with default parameters
+func Init(onCloseFunc func()) Workspace {
+	gradient := tools.Gradient{}
+	gradient.Init()
+
+	return Workspace{
+		amOpen:        true,
+		connectPoints: false,
+		autoUpdate:    false,
+		onClose:       onCloseFunc,
+		numPoints:     1_000_000,
+		aString:       "0.65343",
+		bString:       "0.7345345",
+		cString:       "1.3",
+		dString:       "1.4",
+		gradient:      gradient,
+
+		x0Str:       "0.1",
+		y0Str:       "0.1",
+		scaleFactor: 0.1,
+		offxPer:     0.5,
+		offyPer:     0.5,
+
+		XExpStr: "sin(x*y/b)*y+cos(a*x-y)",
+		YExpStr: "x+(sin(y)/b)",
+
+		XExpRep: "--Regenerate to show compiled equation--",
+		YExpRep: "--Regenerate to show compiled equation--",
+
+		nthRoot:      2,
+		imageWidth:   1366,
+		imageHeight:  768,
+		displayScale: 0.75,
+	}
+}
+
 //Takes all the editors and their values and updates the values to be sent to the rendering function
-func (ws *Attractor2DWorkspace) updateParams() {
+func (ws *Workspace) updateParams() {
 	_, err := strconv.ParseFloat("a", 64)
 	ws.paramA, err = strconv.ParseFloat(ws.aString, 64)
 	ws.paramB, err = strconv.ParseFloat(ws.bString, 64)
@@ -136,15 +139,15 @@ func (ws *Attractor2DWorkspace) updateParams() {
 
 }
 
-//Called for AutoUpdate Editors
-func (ws *Attractor2DWorkspace) UpdateImageAuto() {
+//UpdateImageAuto updates the rendered image if auto update is on
+func (ws *Workspace) UpdateImageAuto() {
 	if ws.autoUpdate {
 		ws.CreateLoadImage()
 	}
 }
 
-//Completely recreates and reloads the render
-func (ws *Attractor2DWorkspace) CreateLoadImage() {
+//CreateLoadImage completely rerenders and reloads the render
+func (ws *Workspace) CreateLoadImage() {
 	ws.updateParams()
 	ws.CreateImage()
 	ws.loadImage()
@@ -152,19 +155,20 @@ func (ws *Attractor2DWorkspace) CreateLoadImage() {
 }
 
 //Loads the image from an image.RGBA (for now a file) into a texture to display
-func (ws *Attractor2DWorkspace) loadImage() {
+func (ws *Workspace) loadImage() {
 	img, _ := g.LoadImage("out.png")
 	go func() {
 		ws.imageTex, _ = g.NewTextureFromRgba(img)
 	}()
 }
 
-func (ws *Attractor2DWorkspace) GetSelf() *Attractor2DWorkspace {
-	return ws
-}
+//Build builds the workspace for use with giu
+func (ws *Workspace) Build() {
+	if !ws.amOpen {
+		fmt.Println("Closing\n\n\n\n\n\n\n")
+		ws.onClose()
+	}
 
-//Build The workspace for use with giu
-func (ws *Attractor2DWorkspace) Build() {
 	fullcanvas := g.Layout{
 		g.Custom(func() {
 			canvas := g.GetCanvas()
@@ -191,8 +195,8 @@ func (ws *Attractor2DWorkspace) Build() {
 		g.Separator(),
 
 		g.TreeNode("Equations").Layout(
-			g.InputText("XExp", &ws.XExpStr), g.Tooltip("The expression for newx="),
-			g.InputText("YExp", &ws.YExpStr), g.Tooltip("The expression for newy="),
+			g.InputText("=newx", &ws.XExpStr), g.Tooltip("The expression for newx="),
+			g.InputText("=newy", &ws.YExpStr), g.Tooltip("The expression for newy="),
 			g.Separator(),
 
 			g.TreeNode("Compiled To").Layout(

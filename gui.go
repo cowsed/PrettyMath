@@ -2,38 +2,26 @@ package main
 
 import (
 	g "github.com/AllenDang/giu"
-
-	"./Workspaces/Attractor2D"
 )
 
-var NewWindowOpen = true
-var Attractor2DOpen = true
-//var Workspaces []g.Widget
-var ws attractor2D.Attractor2DWorkspace
+//CurrentWorkspace is the workspace that will be rendered (initial value is the creation page)
+var CurrentWorkspace g.Widget = &NewWorkspace{}
 
+//Create Top Level containers
 func loop() {
 
 	g.SingleWindow("Images").Layout(
 		g.TabBar("TabBar").Layout(
-			&ws,
-			g.TabItem("+").Layout(
-				g.Label("Shouldnt have closed that other window, huh bud"),
-			),
+			CurrentWorkspace,
 		),
 	)
 
 }
 
 func main() {
-	//colGradient.Init()
-	ws=attractor2D.Init()
-	//a2dWS := attractor2D.Init()
-	//Workspaces = append(Workspaces, &a2dWS)
-
-	wnd := g.NewMasterWindow("Fun Graphics Stuff", 1200, 800, 0, nil)
-
-	//loadImage()
-
+	//Create Window
+	wnd := g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
+	//Run it
 	wnd.Run(loop)
 
 }
