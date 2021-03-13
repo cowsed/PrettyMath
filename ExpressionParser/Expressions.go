@@ -7,15 +7,12 @@ import (
 	"strings"
 )
 
-var Vars map[string]float64
-
-func ParseExpression(inString string) EquationElement {
-	fmt.Println("Vars: ", Vars)
+func ParseExpression(inString string, Vars map[string]float64) EquationElement {
 	s1 := cleanUp(inString)
 	s2 := strings.ReplaceAll(s1, "  ", " ")
 	parts := strings.Split(s2, " ")
 	fmt.Println("Parts: ", parts)
-	exp := CompileExpression(parts)
+	exp := compileExpression(parts, Vars)
 	fmt.Print("Finished Compiling: ")
 	fmt.Println("expression", exp)
 	fmt.Println(exp[0].BecomeString())
@@ -88,7 +85,7 @@ func makeOperator(token string, a, b EquationElement) EquationElement {
 }
 
 //A Variant of shunting car
-func CompileExpression(tokens []string) []EquationElement {
+func compileExpression(tokens []string, Vars map[string]float64) []EquationElement {
 	//0 for left 1 for right
 	var precidence map[string]int = map[string]int{"+": 2, "-": 2, "/": 3, "*": 3, "^": 14, "f(": 1}
 	operatorStack := []string{}
@@ -180,8 +177,7 @@ func CompileExpression(tokens []string) []EquationElement {
 				fmt.Println("\t]")
 				fmt.Println("\toperatorStack: ", operatorStack)
 				fmt.Println("\t----")
-				
-				
+
 				var op string
 				operatorStack, op = pop(operatorStack)
 				var element EquationElement
@@ -367,7 +363,7 @@ func cleanUp(start string) string {
 }
 
 type EquationElement interface {
-	BecomeNumber() float64
+	BecomeNumber(map[string]float64) float64
 	BecomeString() string
 }
 
@@ -383,7 +379,7 @@ type Variable struct {
 	name string
 }
 
-func (V Variable) BecomeNumber() float64 {
+func (V Variable) BecomeNumber(Vars map[string]float64) float64 {
 	return Vars[V.name]
 }
 func (V Variable) BecomeString() string {
@@ -395,11 +391,11 @@ type Siner struct {
 	a EquationElement
 }
 
-func (S *Siner) BecomeNumber() float64 {
-	return math.Sin(S.a.BecomeNumber())
+func (S *Siner) BecomeNumber(Vars map[string]float64) float64 {
+	return math.Sin(S.a.BecomeNumber(Vars))
 }
 func (S *Siner) BecomeString() string {
-	return "sin(" + S.a.BecomeString() + ")"
+	return "sin(" + toStringNice(S.a) + ")"
 }
 
 //The Coser
@@ -407,11 +403,11 @@ type Coser struct {
 	a EquationElement
 }
 
-func (C *Coser) BecomeNumber() float64 {
-	return math.Cos(C.a.BecomeNumber())
+func (C *Coser) BecomeNumber(Vars map[string]float64) float64 {
+	return math.Cos(C.a.BecomeNumber(Vars))
 }
 func (C *Coser) BecomeString() string {
-	return "cos(" + C.a.BecomeString() + ")"
+	return "cos(" + toStringNice(C.a) + ")"
 }
 
 //The Adder
@@ -419,11 +415,11 @@ type Adder struct {
 	a, b EquationElement
 }
 
-func (Add *Adder) BecomeNumber() float64 {
-	return Add.a.BecomeNumber() + Add.b.BecomeNumber()
+func (Add *Adder) BecomeNumber(Vars map[string]float64) float64 {
+	return Add.a.BecomeNumber(Vars) + Add.b.BecomeNumber(Vars)
 }
 func (Add *Adder) BecomeString() string {
-	return "(" + Add.a.BecomeString() + "+" + Add.b.BecomeString() + ")"
+	return "(" + toStringNice(Add.a) + "+" + toStringNice(Add.b) + ")"
 }
 
 //The Subtractor
@@ -431,11 +427,11 @@ type Subtractor struct {
 	a, b EquationElement
 }
 
-func (Sub *Subtractor) BecomeNumber() float64 {
-	return Sub.a.BecomeNumber() - Sub.b.BecomeNumber()
+func (Sub *Subtractor) BecomeNumber(Vars map[string]float64) float64 {
+	return Sub.a.BecomeNumber(Vars) - Sub.b.BecomeNumber(Vars)
 }
 func (Sub *Subtractor) BecomeString() string {
-	return "(" + Sub.a.BecomeString() + "-" + Sub.b.BecomeString() + ")"
+	return "(" + toStringNice(Sub.a) + "-" + toStringNice(Sub.b) + ")"
 }
 
 //The Multiplier
@@ -443,12 +439,11 @@ type Multiplier struct {
 	a, b EquationElement
 }
 
-func (Mul *Multiplier) BecomeNumber() float64 {
-	//fmt.Println(Mul.a.BecomeNumber()," and* ",Mul.b.BecomeNumber())
-	return Mul.a.BecomeNumber() * Mul.b.BecomeNumber()
+func (Mul *Multiplier) BecomeNumber(Vars map[string]float64) float64 {
+	return Mul.a.BecomeNumber(Vars) * Mul.b.BecomeNumber(Vars)
 }
 func (Mul *Multiplier) BecomeString() string {
-	return "(" + Mul.a.BecomeString() + "*" + Mul.b.BecomeString() + ")"
+	return "(" + toStringNice(Mul.a) + "*" + toStringNice(Mul.b) + ")"
 }
 
 //The Divider
@@ -456,11 +451,11 @@ type Divider struct {
 	a, b EquationElement
 }
 
-func (Div *Divider) BecomeNumber() float64 {
-	return Div.a.BecomeNumber() / Div.b.BecomeNumber()
+func (Div *Divider) BecomeNumber(Vars map[string]float64) float64 {
+	return Div.a.BecomeNumber(Vars) / Div.b.BecomeNumber(Vars)
 }
 func (Div *Divider) BecomeString() string {
-	return "(" + Div.a.BecomeString() + "/" + Div.b.BecomeString() + ")"
+	return "(" + toStringNice(Div.a) + "/" + toStringNice(Div.b) + ")"
 }
 
 //Base Number
@@ -468,7 +463,7 @@ type Num struct {
 	n float64
 }
 
-func (n *Num) BecomeNumber() float64 {
+func (n *Num) BecomeNumber(Vars map[string]float64) float64 {
 	return n.n
 }
 func (n *Num) BecomeString() string {

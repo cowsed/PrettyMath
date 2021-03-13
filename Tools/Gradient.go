@@ -20,7 +20,6 @@ type GradientTick struct {
 
 
 func (g *Gradient) Init() {
-	
 	//Sets two values black at 0, white at 1
 	g.AddTick(0.0, color.RGBA{0, 0, 0, 0xff})
 	g.AddTick(0.3, color.RGBA{255, 0, 255, 0xff})
@@ -123,6 +122,10 @@ func (g *Gradient) sort() {
 	sort.SliceStable(g.ticks, func(i, j int) bool { return g.ticks[i].pos < g.ticks[j].pos })
 }
 
+
+
+
+
 //Widget for preview of the widget
 type GradientEditorWidget struct {
 	previewTexID imgui.TextureID
@@ -184,7 +187,7 @@ func (gr *GradientEditorWidget) UpdateTex() {
 
 	texid, err := renderer.LoadImage(img)
 	gr.previewTexID = texid
-	fmt.Println("ERR: ", err)
+	fmt.Println("Texture Update Error ERR: ", err)
 
 }
 
