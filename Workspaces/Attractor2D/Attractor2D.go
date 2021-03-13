@@ -46,8 +46,8 @@ type Workspace struct {
 	//Expression Stuff
 	XExpStr string //= "sin(x*y/b)*y+cos(a*x-y)"
 	YExpStr string // = "x+sin(y)/b"
-	XExp    ep.EquationElement
-	YExp    ep.EquationElement
+	XExp    ep.ExpressionElement
+	YExp    ep.ExpressionElement
 	XExpRep string //= "--Regenerate to show compiled equation--"
 	YExpRep string // = "--Regenerate to show compiled equation--"
 
