@@ -9,6 +9,9 @@ import (
 	"sort"
 )
 
+//TODO: add corresponding functions for each gradient tick to move them around and edit the gradient
+//To start, get a function that can be called by each button with their index that says button $index was pressed
+
 //A Gradient that holds color ticks at specific places (The idea and implementation was pretty much stolen straight from the Godot game engine
 type Gradient struct {
 	ticks []gradientTick //This must be insured to be in order of position
@@ -17,20 +20,20 @@ type Gradient struct {
 //The tick for a gradient. has a position and a color
 type gradientTick struct {
 	pos   float64
-	color color.RGBA
+	color [4]float32
 }
 
 //Init creates a default Gradient with default ticks to avoid a slice length of 0
 func (g *Gradient) Init() {
 	//Sets two values black at 0, white at 1
-	g.AddTick(0.0, color.RGBA{0, 0, 0, 0xff})
-	g.AddTick(0.3, color.RGBA{255, 0, 255, 0xff})
-	g.AddTick(0.6, color.RGBA{255, 255, 255, 0xff})
+	g.AddTick(0.0, [4]float32{0, 0, 0, 1})
+	g.AddTick(0.3, [4]float32{1, 0, 1, 1})
+	g.AddTick(0.6, [4]float32{1, 1, 1, 1})
 }
 
 //GetColorAt gets the color at a position and interpolates if there is not a tick there
-func (g *Gradient) GetColorAt(pos float64) color.RGBA {
-	var c color.RGBA
+func (g *Gradient) GetColorAt(pos float64) [4]float32 {
+	//var c color.RGBA
 
 	//Make sure pos is in the bounds of the array
 	//A binary search would be faster rather than starting at the top
@@ -67,9 +70,9 @@ func (g *Gradient) GetColorAt(pos float64) color.RGBA {
 
 	return lerpColor(pointSecond.color, pointFirst.color, (pos-pointFirst.pos)/(pointSecond.pos-pointFirst.pos))
 
-	return c
+	//return c
 }
-func clamp(x, h, l float64) float64 {
+func clamp(x, l, h float64) float64 {
 	if x > h {
 		x = h
 	} else if x < l {
@@ -79,27 +82,35 @@ func clamp(x, h, l float64) float64 {
 }
 
 //amt is 0-1
-func lerpColor(cola, colb color.RGBA, amt float64) color.RGBA {
-	r := lerp(cola.R, colb.R, amt)
-	g := lerp(cola.G, colb.G, amt)
-	b := lerp(cola.B, colb.B, amt)
-	a := lerp(cola.A, colb.A, amt)
-	return color.RGBA{r, g, b, a}
+func lerpColor(cola, colb [4]float32, amt float64) [4]float32 {
+	r := lerp(cola[0], colb[0], amt)
+	g := lerp(cola[1], colb[1], amt)
+	b := lerp(cola[2], colb[2], amt)
+	a := lerp(cola[3], colb[3], amt)
+	return [4]float32{r, g, b, a}
 }
 
-func lerp(a, b uint8, amt float64) uint8 {
-	return uint8(float64(a)*(amt) + float64(b)*(1-amt))
+func lerp(a, b float32, amt float64) float32 {
+	return (a*float32(amt) + b*float32(1-amt))
 }
 
 //SetColor sets the color of the tick at the index specified
-func (g *Gradient) SetColor(index int, newColor color.RGBA) {
+func (g *Gradient) SetColor(index int, newColor [4]float32) {
 	if index < len(g.ticks) {
 		g.ticks[index].color = newColor
 	}
 }
 
+//SetPos sets the position of a tick specified at a certain index
+func (g *Gradient) SetPos(index int, newPos float64) {
+	if index < len(g.ticks) {
+		g.ticks[index].pos = newPos
+	}
+	g.sort()
+}
+
 //AddTick adds a tick with a position and a color
-func (g *Gradient) AddTick(pos float64, color color.RGBA) {
+func (g *Gradient) AddTick(pos float64, color [4]float32) {
 	g.ticks = append(g.ticks, gradientTick{pos, color})
 	g.sort()
 }
@@ -112,8 +123,8 @@ func (g *Gradient) makePreview() *image.RGBA {
 	for i := 0; i <= previewSize; i++ {
 		amt := float64(i) / float64(previewSize)
 		col := g.GetColorAt(amt)
-		r, g, b, a := col.RGBA()
-		pixels = append(pixels, []uint8{uint8(r), uint8(g), uint8(b), uint8(a)}...)
+		r, g, b, a := col[0], col[1], col[2], col[3]
+		pixels = append(pixels, []uint8{uint8(r * 255), uint8(g * 255), uint8(b * 255), uint8(a * 255)}...)
 	}
 	img := image.RGBA{pixels, 1, image.Rectangle{image.Point{0, 0}, image.Point{len(pixels) / 4, 1}}}
 	return &img
@@ -128,16 +139,22 @@ func (g *Gradient) sort() {
 type GradientEditorWidget struct {
 	previewTexID imgui.TextureID
 	grad         *Gradient
+	active       *int //The active tick
 }
 
 //GradientEditor creates a GradientEditor for use in immediate mode gui
-func GradientEditor(id string, gradient *Gradient, flags int) GradientEditorWidget {
+func GradientEditor(id string, gradient *Gradient, currentColor *int, flags int) GradientEditorWidget {
 
 	//img:=gradient.makePreview()
 	g := GradientEditorWidget{}
 	g.grad = gradient
+	g.active = currentColor
 	g.UpdateTex()
 	return g
+}
+
+func arrToVec4(arr [4]float32) imgui.Vec4 {
+	return imgui.Vec4{arr[0], arr[1], arr[2], arr[3]}
 }
 
 //Build provides the build function for immediate mode
@@ -147,7 +164,8 @@ func (gr GradientEditorWidget) Build() {
 	imgui.Text("Gradient")
 	p := giu.GetCursorScreenPos()
 
-	imgui.ImageButton(gr.previewTexID, imgui.Vec2{availableWidth, 10})
+	//imgui.ImageButton(gr.previewTexID, imgui.Vec2{availableWidth, 10})
+	imgui.ImageButtonV(gr.previewTexID, imgui.Vec2{availableWidth, 10}, imgui.Vec2{0, 0}, imgui.Vec2{1, 1}, 0, imgui.Vec4{0, 0, 0, 0}, imgui.Vec4{1, 1, 1, 1})
 	drawList := imgui.GetWindowDrawList()
 
 	tickHeight := 14
@@ -157,8 +175,15 @@ func (gr GradientEditorWidget) Build() {
 	topOffset := 10
 	tickSize := imgui.Vec2{float32(tickBorder*2 + topOffset), float32(tickHeight + topOffset + tickBorder*2)}
 	for i, t := range gr.grad.ticks {
-		col := giu.ToVec4Color(t.color)
+		col := arrToVec4(t.color) //giu.ToVec4Color(t.color)
 		pos := float32(t.pos) * availableWidth
+
+		if i == *gr.active {
+			tickBgCol = giu.ToVec4Color(color.RGBA{uint8(71), uint8(143), uint8(255), uint8(0xff)})
+		} else {
+			tickBgCol = giu.ToVec4Color(color.RGBA{uint8(28), uint8(36), uint8(43), uint8(0xff)})
+
+		}
 
 		pmin := p.Add(image.Point{int(pos) - tickBorder, 10 - tickBorder})
 		pmax := p.Add(image.Point{10 + int(pos) + tickBorder, tickHeight + 10 + tickBorder})
@@ -168,14 +193,27 @@ func (gr GradientEditorWidget) Build() {
 		pmax2 := p.Add(image.Point{10 + int(pos), tickHeight + 10})
 		drawList.AddRectFilled(giu.ToVec2(pmin2), giu.ToVec2(pmax2), col, 0, 5)
 
-		imgui.SetCursorScreenPos(giu.ToVec2(p.Add(image.Point{int(availableWidth * float32(t.pos)), 0})))
-		if imgui.ButtonV("ButtonX"+string(i), tickSize) {
+		imgui.SetCursorScreenPos(giu.ToVec2(p.Add(image.Point{int(availableWidth*float32(t.pos)) - tickBorder, 0})))
+		if imgui.InvisibleButton("ButtonX"+string(i), tickSize) {
 			fmt.Println("clicked: ", i)
+			*gr.active = i
+			fmt.Println("Active: ", gr.active)
 		}
-		if imgui.IsItemHovered() {
-			fmt.Println("Hovered")
+		if imgui.IsItemActive() {
+			io := imgui.CurrentIO()
+			md := io.GetMouseDelta()
+			gr.grad.SetPos(i, clamp(t.pos+float64(md.X/availableWidth), 0.0, 1.0))
+			*gr.active = i
+		}
+		if imgui.IsItemClicked(2){
+			*gr.active = -1
 		}
 	}
+	if *gr.active != -1 {
+		imgui.ColorPicker4("Gradient Color Picker", &gr.grad.ticks[*gr.active].color)
+	}
+
+
 }
 
 //UpdateTex gets a new image from the gradient and deals with registering it as a textyre
@@ -187,6 +225,7 @@ func (gr *GradientEditorWidget) UpdateTex() {
 
 	texid, err := renderer.LoadImage(img)
 	gr.previewTexID = texid
-	fmt.Println("Texture Update Error ERR: ", err)
-
+	if err != nil {
+		fmt.Println("Texture Update Error ERR: ", err)
+	}
 }

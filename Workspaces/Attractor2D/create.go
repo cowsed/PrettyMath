@@ -3,6 +3,7 @@ package attractor2d
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"math"
 	"os"
@@ -73,11 +74,14 @@ func (ws *Workspace) CreateImage() {
 			}
 			amt = math.Pow(amt, 1.0/float64(ws.nthRoot))
 			newCol := ws.gradient.GetColorAt(amt)
-			img.Set(x, y, newCol)
+			img.Set(x, y, arrToRGBA(newCol))
 		}
 	}
 	f, _ := os.Create("out.png")
 	png.Encode(f, img)
+}
+func arrToRGBA(arr [4]float32) color.RGBA {
+	return color.RGBA{uint8(arr[0]*255), uint8(arr[1]*255), uint8(arr[2]*255), uint8(arr[3]*255)}
 }
 
 func minI(a, b int) int {

@@ -55,6 +55,7 @@ type Workspace struct {
 
 	//Colors
 	gradient tools.Gradient
+	currentColor int //Which color is currently being edited
 	nthRoot  float32 //= 2
 
 	//Output Info
@@ -221,7 +222,7 @@ func (ws *Workspace) Build() {
 		g.Separator(),
 		g.TreeNode("Colors").Layout(
 			g.InputFloat("nthRt(points)", &ws.nthRoot), g.Tooltip("n for the nth root of normalized points in a pixel"),
-			tools.GradientEditor("Gradient Editor", &ws.gradient, 0),
+			tools.GradientEditor("Gradient Editor", &ws.gradient,&ws.currentColor, 0),
 		).Flags(g.TreeNodeFlagsFramed),
 	)
 
