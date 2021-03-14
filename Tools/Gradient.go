@@ -115,6 +115,17 @@ func (g *Gradient) AddTick(pos float64, color [4]float32) {
 	g.sort()
 }
 
+func (g *Gradient) RemoveTick(i int) {
+	g.ticks[i] = g.ticks[len(g.ticks)-1]     // Copy last element to index i.
+	g.ticks[len(g.ticks)-1] = gradientTick{} // Erase last element (write zero value).
+	g.ticks = g.ticks[:len(g.ticks)-1]       // Truncate slice.
+
+	//Make it not empty
+	if len(g.ticks) == 0 {
+		g.AddTick(0.5, [4]float32{0, 0, 0, 1})
+	}
+}
+
 //makePreview creates a 1 by previewSize image for previewing the gradient in a widget
 func (g *Gradient) makePreview() *image.RGBA {
 	//Horizontal resolution of the preview
@@ -166,6 +177,16 @@ func (gr GradientEditorWidget) Build() {
 
 	//imgui.ImageButton(gr.previewTexID, imgui.Vec2{availableWidth, 10})
 	imgui.ImageButtonV(gr.previewTexID, imgui.Vec2{availableWidth, 10}, imgui.Vec2{0, 0}, imgui.Vec2{1, 1}, 0, imgui.Vec4{0, 0, 0, 0}, imgui.Vec4{1, 1, 1, 1})
+	if imgui.IsItemClicked(0) {
+		fmt.Println("add color")
+		//Add color at mouse position
+		m:=imgui.MousePos()
+		xpercent:=clamp(float64((m.X-float32(p.X))/availableWidth),0.0,1.0)
+		c:=gr.grad.GetColorAt(xpercent)
+		gr.grad.AddTick(xpercent,c)
+	}
+	
+	
 	drawList := imgui.GetWindowDrawList()
 
 	tickHeight := 14
@@ -205,14 +226,18 @@ func (gr GradientEditorWidget) Build() {
 			gr.grad.SetPos(i, clamp(t.pos+float64(md.X/availableWidth), 0.0, 1.0))
 			*gr.active = i
 		}
-		if imgui.IsItemClicked(2){
+		if imgui.IsItemClicked(2) {
 			*gr.active = -1
+		}
+		if imgui.IsItemClicked(1) {
+			*gr.active = -1
+			fmt.Println("Deleting", i)
+			gr.grad.RemoveTick(i)
 		}
 	}
 	if *gr.active != -1 {
 		imgui.ColorPicker4("Gradient Color Picker", &gr.grad.ticks[*gr.active].color)
 	}
-
 
 }
 
