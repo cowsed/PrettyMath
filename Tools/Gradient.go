@@ -9,8 +9,6 @@ import (
 	"sort"
 )
 
-//TODO: add corresponding functions for each gradient tick to move them around and edit the gradient
-//To start, get a function that can be called by each button with their index that says button $index was pressed
 
 //A Gradient that holds color ticks at specific places (The idea and implementation was pretty much stolen straight from the Godot game engine
 type Gradient struct {
@@ -23,12 +21,14 @@ type gradientTick struct {
 	color [4]float32
 }
 
-//Init creates a default Gradient with default ticks to avoid a slice length of 0
-func (g *Gradient) Init() {
+//GradientInit creates a default Gradient with default ticks to avoid a slice length of 0
+func GradientInit() Gradient {
+	g := Gradient{}
 	//Sets two values black at 0, white at 1
 	g.AddTick(0.0, [4]float32{0, 0, 0, 1})
 	g.AddTick(0.3, [4]float32{1, 0, 1, 1})
 	g.AddTick(0.6, [4]float32{1, 1, 1, 1})
+	return g
 }
 
 //GetColorAt gets the color at a position and interpolates if there is not a tick there
@@ -126,6 +126,14 @@ func (g *Gradient) RemoveTick(i int) {
 	}
 }
 
+//Copy deep copies the gradient
+func (g *Gradient) Copy() Gradient {
+	newg := GradientInit()
+	newg.ticks = make([]gradientTick, len(g.ticks))
+	copy(newg.ticks, g.ticks)
+	return newg
+}
+
 //makePreview creates a 1 by previewSize image for previewing the gradient in a widget
 func (g *Gradient) makePreview() *image.RGBA {
 	//Horizontal resolution of the preview
@@ -170,8 +178,8 @@ func arrToVec4(arr [4]float32) imgui.Vec4 {
 
 //Build provides the build function for immediate mode
 func (gr GradientEditorWidget) Build() {
-
-	var availableWidth float32 = 100.0 //TODO make this take up the correct amount of space
+	avail := imgui.ContentRegionAvail()
+	var availableWidth float32 = avail.X //100.0 //TODO make this take up the correct amount of space
 	imgui.Text("Gradient")
 	p := giu.GetCursorScreenPos()
 
@@ -180,13 +188,12 @@ func (gr GradientEditorWidget) Build() {
 	if imgui.IsItemClicked(0) {
 		fmt.Println("add color")
 		//Add color at mouse position
-		m:=imgui.MousePos()
-		xpercent:=clamp(float64((m.X-float32(p.X))/availableWidth),0.0,1.0)
-		c:=gr.grad.GetColorAt(xpercent)
-		gr.grad.AddTick(xpercent,c)
+		m := imgui.MousePos()
+		xpercent := clamp(float64((m.X-float32(p.X))/availableWidth), 0.0, 1.0)
+		c := gr.grad.GetColorAt(xpercent)
+		gr.grad.AddTick(xpercent, c)
 	}
-	
-	
+
 	drawList := imgui.GetWindowDrawList()
 
 	tickHeight := 14
@@ -236,7 +243,7 @@ func (gr GradientEditorWidget) Build() {
 		}
 	}
 	if *gr.active != -1 {
-		imgui.ColorPicker4("Gradient Color Picker", &gr.grad.ticks[*gr.active].color)
+		imgui.ColorPicker4("# Gradient Color Picker", &gr.grad.ticks[*gr.active].color)
 	}
 
 }

@@ -1,16 +1,20 @@
+//Important - fix power and function parsing - also add error checking
 package expressions
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
 )
 
+
+
 //ParseExpression takes in a string, cleans it, tokenizes it and converts it to a calculatable structure of ExpressionElements
 func ParseExpression(inString string, Vars map[string]float64) ExpressionElement {
-	s1 := cleanUp(inString)
-	s2 := strings.ReplaceAll(s1, "  ", " ")
+	s1 := cleanUp(inString) 
+	s2 := strings.ReplaceAll(s1, "  ", " ") 
 	parts := strings.Split(s2, " ")
 	fmt.Println("Parts: ", parts)
 	exp := compileExpression(parts, Vars)
@@ -25,7 +29,7 @@ func inMap(key string, m map[string]float64) bool {
 	_, in := m[key]
 	return in
 }
-func assembleOperator(token string, outputQueue []ExpressionElement) (ExpressionElement, []ExpressionElement) {
+func assembleOperator(token string, outputQueue []ExpressionElement) (ExpressionElement, []ExpressionElement, error) {
 	//Stick together elements into biger element
 	var a ExpressionElement = nil
 	var b ExpressionElement = nil
@@ -49,10 +53,11 @@ func assembleOperator(token string, outputQueue []ExpressionElement) (Expression
 
 	}
 	var res ExpressionElement
-	res = makeOperator(token, a, b)
-	return res, outputQueue
+	
+	res,err := makeOperator(token, a, b)
+	return res, outputQueue, err
 }
-func makeOperator(token string, a, b ExpressionElement) ExpressionElement {
+func makeOperator(token string, a, b ExpressionElement) (ExpressionElement, error) {
 	//Function vs Operator
 	fmt.Println("OPERATOR? ", token)
 	if strings.Contains(token, "(") {
@@ -61,26 +66,26 @@ func makeOperator(token string, a, b ExpressionElement) ExpressionElement {
 		fmt.Println("A: ", a, "B: ", b)
 		switch token {
 		case "sin(":
-			return &Siner{b}
+			return &Siner{b},nil
 		case "cos(":
-			return &Coser{b}
+			return &Coser{b},nil
 		default:
-			return b //,err
+			return b,errors.New("Compile Error: No Matching Function: "+token)
 		}
 	} else {
 		//Operators
 		fmt.Println("Adding Operator to output. op. ", token)
 		switch token {
 		case "+":
-			return &Adder{a, b}
+			return &Adder{a, b},nil
 		case "-":
-			return &Subtractor{a, b}
+			return &Subtractor{a, b},nil
 		case "*":
-			return &Multiplier{a, b}
+			return &Multiplier{a, b},nil
 		case "/":
-			return &Divider{a, b}
+			return &Divider{a, b},nil
 		}
-		return a //,err
+		return a, errors.New("Compile Error: somehow both an operator and not an operator: "+token)
 	}
 
 }
@@ -147,7 +152,11 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 						operatorStack, op = pop(operatorStack)
 						//fmt.Println("in:", outputQueue)
 						var element ExpressionElement
-						element, outputQueue = assembleOperator(op, outputQueue)
+						var err error
+						element, outputQueue,err = assembleOperator(op, outputQueue)
+						if err!=nil{
+						fmt.Println(err)
+						}
 						//fmt.Println("out:", outputQueue)
 						outputQueue = append(outputQueue, element)
 					} else {
@@ -182,7 +191,11 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 				var op string
 				operatorStack, op = pop(operatorStack)
 				var element ExpressionElement
-				element, outputQueue = assembleOperator(op, outputQueue)
+				var err error
+				element, outputQueue,err = assembleOperator(op, outputQueue)
+				if err!=nil{
+					fmt.Println(err)
+				}
 				outputQueue = append(outputQueue, element)
 
 			}
@@ -199,7 +212,11 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 					var op string
 					operatorStack, op = pop(operatorStack)
 					var element ExpressionElement
-					element, outputQueue = assembleOperator(op, outputQueue)
+					var err error
+					element, outputQueue, err = assembleOperator(op, outputQueue)
+					if err!=nil{
+						fmt.Println(err)
+					}
 					outputQueue = append(outputQueue, element)
 				}
 			}
@@ -224,8 +241,11 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 
 		operatorStack, op = pop(operatorStack)
 		var element ExpressionElement
-		element, outputQueue = assembleOperator(op, outputQueue)
-
+		var err error
+		element, outputQueue, err = assembleOperator(op, outputQueue)
+		if err!=nil{
+		fmt.Println(err)
+		}
 		//fmt.Println("OutEndOp: ", operatorStack)
 		//fmt.Println("InEndQ: ", outputQueue)
 
@@ -242,6 +262,10 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 	fmt.Println("----")
 
 	return outputQueue
+}
+
+type CompileError struct{
+	
 }
 
 //Helper popping functionns to make writing a bit easier - needs reslicing which is apparently bad but whatever

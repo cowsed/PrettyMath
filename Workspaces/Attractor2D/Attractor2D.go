@@ -20,10 +20,10 @@ type Workspace struct {
 	onClose       func()
 	//Parameters
 	//Editor Versions
-	aString string //= "0.65343"
-	bString string //= "0.7345345"
-	cString string //= "1.3"
-	dString string //= "1.4"
+	aString string
+	bString string
+	cString string
+	dString string
 	//Value Versions
 	paramA float64
 	paramB float64
@@ -31,10 +31,10 @@ type Workspace struct {
 	paramD float64
 
 	//Initial Points
-	x0    float64 //= 0.1
-	y0    float64 // = 0.1
-	x0Str string  //= "0.1"
-	y0Str string  //= "0.1"
+	x0    float64
+	y0    float64
+	x0Str string
+	y0Str string
 
 	//Scale and translations
 	scaleFactor float32
@@ -44,34 +44,38 @@ type Workspace struct {
 	offy        int
 
 	//Expression Stuff
-	XExpStr string //= "sin(x*y/b)*y+cos(a*x-y)"
-	YExpStr string // = "x+sin(y)/b"
+	XExpStr string
+	YExpStr string
 	XExp    ep.ExpressionElement
 	YExp    ep.ExpressionElement
-	XExpRep string //= "--Regenerate to show compiled equation--"
-	YExpRep string // = "--Regenerate to show compiled equation--"
+	XExpRep string
+	YExpRep string
 
 	Variables map[string]float64
 
 	//Colors
-	gradient tools.Gradient
-	currentColor int //Which color is currently being edited
-	nthRoot  float32 //= 2
+	gradient     tools.Gradient
+	currentColor int
+	nthRoot      float32
 
 	//Output Info
-	imageWidth  int32 // 800
-	imageHeight int32 //= 600
+	imageWidth  int32
+	imageHeight int32
 	image       image.RGBA
 	imageTex    *g.Texture
 
-	displayScale float32 // =0.75
+	displayScale float32
 
+	//Animation stuff
+	selectedAnimationIndex int32
+	selectedAnimation      animationMaker
+	animationFrames        int32
+	animationFolder string
 }
 
 //Init creates a new 2d attractor workspace with default parameters
 func Init(onCloseFunc func()) Workspace {
-	gradient := tools.Gradient{}
-	gradient.Init()
+	gradient := tools.GradientInit()
 
 	return Workspace{
 		amOpen:        true,
@@ -101,6 +105,11 @@ func Init(onCloseFunc func()) Workspace {
 		imageWidth:   1366,
 		imageHeight:  768,
 		displayScale: 0.75,
+
+		selectedAnimationIndex: 0,
+		selectedAnimation:      availableAnimations[0],
+		animationFrames:        60,
+		animationFolder: "GifExport/",
 	}
 }
 
@@ -140,6 +149,33 @@ func (ws *Workspace) updateParams() {
 
 }
 
+func (ws *Workspace) MakeRenderer() renderer {
+	//Deep copy variables
+	newVars := make(map[string]float64)
+	for k, v := range ws.Variables {
+		newVars[k] = v
+	}
+	r := renderer{
+		newVars,
+		ws.XExp,
+		ws.YExp,
+		float64(ws.nthRoot),
+		ws.gradient.Copy(),
+		int(ws.imageWidth), int(ws.imageHeight),
+		int(float32(ws.imageWidth) * ws.offxPer), int(float32(ws.imageHeight) * ws.offyPer),
+		float64(ws.scaleFactor),
+		int(ws.numPoints),
+		"out.png",
+	}
+	return r
+}
+func (ws *Workspace) makeAnimation(){
+	r:=ws.MakeRenderer()
+	animator:=ws.selectedAnimation.deepCopy()
+	animator.makeFrames(int(ws.animationFrames),ws.animationFolder,r)
+	
+}
+
 //UpdateImageAuto updates the rendered image if auto update is on
 func (ws *Workspace) UpdateImageAuto() {
 	if ws.autoUpdate {
@@ -150,10 +186,13 @@ func (ws *Workspace) UpdateImageAuto() {
 //CreateLoadImage completely rerenders and reloads the render
 func (ws *Workspace) CreateLoadImage() {
 	ws.updateParams()
-	ws.CreateImage()
+	r := ws.MakeRenderer()
+	r.render()
 	ws.loadImage()
 	g.Update()
+
 }
+
 
 //Loads the image from an image.RGBA (for now a file) into a texture to display
 func (ws *Workspace) loadImage() {
@@ -169,7 +208,9 @@ func (ws *Workspace) Build() {
 		fmt.Println("Closing\n\n\n\n\n\n\n")
 		ws.onClose()
 	}
-
+	//Create the animation Creator section
+	var animationCreator = availableAnimations[ws.selectedAnimationIndex].makeSetup()
+	ws.selectedAnimation=availableAnimations[ws.selectedAnimationIndex]
 	fullcanvas := g.Layout{
 		g.Custom(func() {
 			canvas := g.GetCanvas()
@@ -208,8 +249,8 @@ func (ws *Workspace) Build() {
 		g.Separator(),
 
 		g.TreeNode("Image Parameters").Layout(
-			g.DragInt("Image Width", &ws.imageHeight, 0, 4000), g.Tooltip("The width of the outputted image"),
-			g.DragInt("Image Height", &ws.imageWidth, 0, 4000), g.Tooltip("The height of the image outputted image)"),
+			g.DragInt("Image Width", &ws.imageWidth, 0, 4000), g.Tooltip("The width of the outputted image"),
+			g.DragInt("Image Height", &ws.imageHeight, 0, 4000), g.Tooltip("The height of the image outputted image)"),
 			g.InputFloat("Offset X%", &ws.offxPer), g.Tooltip("X translation of output (0 is left, 1 is right"),
 			g.InputFloat("Offset Y%", &ws.offyPer), g.Tooltip("Y translation of output (0 is top, 1 is bottom"),
 			g.InputFloat("Scale Factor", &ws.scaleFactor), g.Tooltip("Scale factor on the points in the output"),
@@ -222,7 +263,16 @@ func (ws *Workspace) Build() {
 		g.Separator(),
 		g.TreeNode("Colors").Layout(
 			g.InputFloat("nthRt(points)", &ws.nthRoot), g.Tooltip("n for the nth root of normalized points in a pixel"),
-			tools.GradientEditor("Gradient Editor", &ws.gradient,&ws.currentColor, 0),
+			tools.GradientEditor("Gradient Editor", &ws.gradient, &ws.currentColor, 0),
+		).Flags(g.TreeNodeFlagsFramed),
+		g.TreeNode("Animations").Layout(
+			g.Combo("# of Frames #AnimationSelector", availableAnimationTitles[ws.selectedAnimationIndex], availableAnimationTitles, &ws.selectedAnimationIndex),
+			g.DragInt("Number of Frames", &ws.animationFrames, 0, 600_000),
+			g.InputText("Folder Path", &ws.animationFolder),
+			g.Separator(),
+			animationCreator,
+			g.Separator(),
+			g.Button("Make Animation").OnClick(ws.makeAnimation),
 		).Flags(g.TreeNodeFlagsFramed),
 	)
 
@@ -234,9 +284,7 @@ func (ws *Workspace) Build() {
 			//g.Button("Expand All").OnClick(ExpandAll), g.Tooltip("Expand all parameter windows"),
 		),
 		g.SplitLayout("MainSplit", g.DirectionHorizontal, true, 300,
-			g.Layout{
-				EditorPanel,
-			},
+			EditorPanel,
 			fullcanvas,
 		),
 	).IsOpen(&ws.amOpen).Build()
