@@ -1,22 +1,30 @@
 # SciTE session file
 
-buffer.1.path=/home/rich/GoProjects/GUIshapes/Workspaces/Attractor2D/create.go
-buffer.1.position=805
+buffer.1.path=/home/rich/GoProjects/GUIshapes/gui.go
+buffer.1.position=419
 buffer.1.scroll=0
 
-buffer.2.path=/home/rich/GoProjects/GUIshapes/gui.go
-buffer.2.position=207
-buffer.2.scroll=7
+buffer.2.path=/home/rich/GoProjects/GUIshapes/ExpressionParser/Expressions.go
+buffer.2.position=4588
+buffer.2.scroll=244
 
-buffer.3.path=/home/rich/GoProjects/GUIshapes/ExpressionParser/Expressions.go
-buffer.3.position=12230
-buffer.3.scroll=418
+buffer.3.path=/home/rich/GoProjects/GUIshapes/Workspaces/Attractor2D/Attractor2D.go
+buffer.3.position=8683
+buffer.3.scroll=256
 
-buffer.4.path=/home/rich/GoProjects/GUIshapes/Workspaces/Attractor2D/Attractor2D.go
-buffer.4.position=842
-buffer.4.scroll=36
+buffer.4.path=/home/rich/GoProjects/GUIshapes/Workspaces/Attractor2D/renderer.go
+buffer.4.position=1583
+buffer.4.scroll=32
 buffer.4.current=1
 
-buffer.5.path=/home/rich/GoProjects/GUIshapes/Tools/Gradient.go
-buffer.5.position=1532
-buffer.5.scroll=39
+buffer.5.path=/home/rich/GoProjects/GUIshapes/Workspaces/Attractor2D/animation.go
+buffer.5.position=3247
+buffer.5.scroll=112
+
+buffer.6.path=/home/rich/GoProjects/GUIshapes/Workspaces/workspace.go
+buffer.6.position=126
+buffer.6.scroll=0
+
+buffer.7.path=/home/rich/GoProjects/GUIshapes/StatusTracker.go
+buffer.7.position=239
+buffer.7.scroll=0

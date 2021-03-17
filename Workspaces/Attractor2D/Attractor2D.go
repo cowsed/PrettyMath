@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"image"
 	"strconv"
-
+	
+	
+	".."
 	ep "../../ExpressionParser"
 	"../../Tools"
 	g "github.com/AllenDang/giu"
@@ -12,6 +14,9 @@ import (
 
 //Workspace is the workspace for generating 2-dimensional Attracors
 type Workspace struct {
+	//Multi Threading stuff
+	processCreator func() chan workspace.ProgressUpdate
+
 	//General Settings
 	amOpen        bool //should be true usually
 	connectPoints bool //= false
@@ -71,13 +76,16 @@ type Workspace struct {
 	selectedAnimation      animationMaker
 	animationFrames        int32
 	animationFolder string
+	
+	
 }
 
 //Init creates a new 2d attractor workspace with default parameters
-func Init(onCloseFunc func()) Workspace {
+func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdate) Workspace {
 	gradient := tools.GradientInit()
 
 	return Workspace{
+		processCreator: processCreator,
 		amOpen:        true,
 		connectPoints: false,
 		autoUpdate:    false,
@@ -170,9 +178,10 @@ func (ws *Workspace) MakeRenderer() renderer {
 	return r
 }
 func (ws *Workspace) makeAnimation(){
+	println("Making animation - workspace")
 	r:=ws.MakeRenderer()
 	animator:=ws.selectedAnimation.deepCopy()
-	animator.makeFrames(int(ws.animationFrames),ws.animationFolder,r)
+	animator.makeFrames(int(ws.animationFrames),ws.animationFolder,r, ws.processCreator)
 	
 }
 
@@ -283,7 +292,7 @@ func (ws *Workspace) Build() {
 			g.Checkbox("Auto-update", &ws.autoUpdate), g.Tooltip("Update On Parameter Change"),
 			//g.Button("Expand All").OnClick(ExpandAll), g.Tooltip("Expand all parameter windows"),
 		),
-		g.SplitLayout("MainSplit", g.DirectionHorizontal, true, 300,
+		g.SplitLayout("A2D MainSplit", g.DirectionHorizontal, true, 300,
 			EditorPanel,
 			fullcanvas,
 		),

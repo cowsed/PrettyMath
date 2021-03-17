@@ -1,8 +1,8 @@
 package attractor2d
 
 import (
+	".."
 	"fmt"
-
 	"github.com/AllenDang/giu"
 	"math/rand"
 )
@@ -13,24 +13,28 @@ var baseRandomWalker = RandomWalkerInit()
 var availableAnimations []animationMaker = []animationMaker{&baseRandomWalker, &parameterAlter{}, &buildUp{5}}
 
 type animationMaker interface {
-	makeFrames(frameAmt int, outPath string, r renderer) //Makes the frame of the video
+	makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) //Makes the frame of the video
 	makeSetup() giu.Widget
 	deepCopy() animationMaker
 }
 
 //Random Walks through parameter space
 type randomWalker struct {
-	labels   []string
-	enableds []bool
-	stepSize float32
+	skipBlanks        bool
+	skipBlanksPercent float32
+	labels            []string
+	enableds          []bool
+	stepSize          float32
 }
 
 //RandomWalkerInit creates a default Random Walker
 func RandomWalkerInit() randomWalker {
 	return randomWalker{
-		labels:   []string{"A", "B", "C", "D", "x0", "y0"},
-		enableds: []bool{true, true, true, true, true, true},
-		stepSize: 0.1,
+		skipBlanks:        false,
+		skipBlanksPercent: 0.3,
+		labels:            []string{"A", "B", "C", "D", "x0", "y0"},
+		enableds:          []bool{true, true, true, true, true, true},
+		stepSize:          0.1,
 	}
 }
 func (rw *randomWalker) makeSetup() giu.Widget {
@@ -42,9 +46,21 @@ func (rw *randomWalker) makeSetup() giu.Widget {
 		func(i int, _ interface{}) giu.Widget { return giu.Checkbox(rw.labels[i], &rw.enableds[i]) },
 	)
 
+	var blankSkipper giu.Widget
+	if rw.skipBlanks {
+		blankSkipper = giu.Group().Layout(
+
+			//if rw.skipBlanks{
+			giu.InputFloat("Skip Blank Percent", &rw.skipBlanksPercent).Size(80),
+			//}
+		)
+	}
 	w := giu.Group().Layout(
 		giu.Label("Random Walker"),
 		giu.InputFloat("Step Size", &rw.stepSize),
+		giu.Label("Skip Blanks"), giu.Tooltip("if true skips any frame where individual points drawn / max image points < maxImagePoints.skipBlanksPercent"),
+		giu.Checkbox("Skip Blanks", &rw.skipBlanks),
+		blankSkipper,
 		giu.Label("Enabled"),
 		giu.Tooltip("Which parameters an be effected by the random walk"),
 		checkBoxes,
@@ -59,45 +75,65 @@ func (rw *randomWalker) deepCopy() animationMaker {
 	enableds := make([]bool, len(rw.enableds))
 	copy(enableds, rw.enableds)
 
-	return &randomWalker{labels, enableds, rw.stepSize}
+	return &randomWalker{false, 0.3, labels, enableds, rw.stepSize}
 }
-func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer) {
-	for f := 0; f < frameAmt; f++ {
-		fmt.Printf("Making frame %d of %d (random walker)\n", f, frameAmt)
-		//Set Parameters
-		fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
-		r.path = fpath
-		r.render()
-		var newa,newb,newc,newd,newx,newy float64
-		//Set up the next round
-		if rw.enableds[0] {
-			newa = r.vars["a"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
+	println("Making animation - animator")
+
+	communicator := processCreator()
+	//mabye defer close(communicator)
+	go func() {
+		println("Making animation - goroutine")
+
+		for f := 0; f < frameAmt; f++ {
+			println("Making animation - loop - goroutine")
+
+			amt := float64(f) / float64(frameAmt)
+			println("Making animation - loop - pre send - goroutine")
+			communicator <- workspace.ProgressUpdate{"Working", amt}
+			println("Making animation - loop - post send - goroutine")
+
+			fmt.Printf("Making frame %d of %d (random walker)\n", f, frameAmt)
+			//Set Parameters
+			fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
+			r.path = fpath
+			println("Making animation - render - goroutine")
+
+			r.render()
+			var newa, newb, newc, newd, newx, newy float64
+			//Set up the next round
+			if rw.enableds[0] {
+				newa = r.vars["a"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+			if rw.enableds[1] {
+				newb = r.vars["b"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+			if rw.enableds[2] {
+				newc = r.vars["d"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+			if rw.enableds[3] {
+				newd = r.vars["d"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+			if rw.enableds[4] {
+				newx = r.vars["z"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+			if rw.enableds[5] {
+				newy = r.vars["y"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
+			}
+
+			fmt.Println("a: %.3f, b: %.3f, c: %.3f, d: %.3f", newa, newb, newc, newd)
+			r.vars["a"] = newa
+			r.vars["b"] = newb
+			r.vars["c"] = newc
+			r.vars["d"] = newd
+			r.vars["x"] = newx
+			r.vars["y"] = newy
 		}
-		if rw.enableds[1] {
-			newb = r.vars["b"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
-		}
-		if rw.enableds[2] {
-			newc = r.vars["d"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
-		}
-		if rw.enableds[3] {
-			newd = r.vars["d"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
-		}
-		if rw.enableds[4] {
-			newx = r.vars["z"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
-		}
-		if rw.enableds[5] {
-			newy = r.vars["y"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
-		}
-		
-		
-		fmt.Println("a: %.3f, b: %.3f, c: %.3f, d: %.3f", newa, newb, newc, newd)
-		r.vars["a"] = newa
-		r.vars["b"] = newb
-		r.vars["c"] = newc
-		r.vars["d"] = newd			
-		r.vars["x"] = newx
-		r.vars["y"] = newy
-	}
+		communicator <- workspace.ProgressUpdate{"End", 1.0}
+		//Notify user of finishing
+		fmt.Println("\n\n\n ---- Finished animation ----\n\n\n")
+		close(communicator)
+	}()
 }
 
 //parameterAlter Accepts functions to add on to parameters for example a+=sin(t) where t is the frame of the video / the total number of frames
@@ -105,14 +141,14 @@ type parameterAlter struct {
 	//[]Expression Elements
 }
 
-func (pa *parameterAlter) makeFrames(frameAmt int, outPath string, r renderer) {
+func (pa *parameterAlter) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
 	for f := 0; f < frameAmt; f++ {
 		fmt.Printf("Making frame %d of %d (Parameter Alterer)", f, frameAmt)
 
 	}
 }
 func (pa *parameterAlter) makeSetup() giu.Widget {
-	return giu.Label("Paramter Alter")
+	return giu.Label("Paramter Alter\nNot implemented yet")
 }
 func (pa *parameterAlter) deepCopy() animationMaker {
 	return &parameterAlter{}
@@ -123,7 +159,7 @@ type buildUp struct {
 	percentPerFrame float32
 }
 
-func (bu *buildUp) makeFrames(frameAmt int, outPath string, r renderer) {
+func (bu *buildUp) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
 	startNumPoints := float64(r.numPoints)
 	for f := 0; f < frameAmt; f++ {
 		fmt.Printf("Making frame %d of %d (buildup)\n", f, frameAmt)

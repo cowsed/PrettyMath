@@ -7,6 +7,8 @@ import (
 	"image/png"
 	"math"
 	"os"
+	
+	"github.com/gen2brain/beeep"
 	ep "../../ExpressionParser"
 	"../../Tools"
 )
@@ -89,6 +91,11 @@ func (r *renderer) render() {
 
 	f, _ := os.Create(r.path)
 	png.Encode(f, img)
+	
+	err := beeep.Alert("Render Finished", "Attractor 2D has finished rendering", r.path)
+	if err != nil {
+		panic(err)
+	}
 
 }
 func (r *renderer) renderAsync() {

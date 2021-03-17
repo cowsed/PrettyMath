@@ -1,26 +1,51 @@
 package main
 
 import (
+	"time"
 	g "github.com/AllenDang/giu"
 )
 
 //CurrentWorkspace is the workspace that will be rendered (initial value is the creation page)
 var CurrentWorkspace g.Widget = &NewWorkspace{}
 
+var wnd *g.MasterWindow
+
+
 //Create Top Level containers
 func loop() {
-
-	g.SingleWindow("Images").Layout(
-		g.TabBar("TabBar").Layout(
-			CurrentWorkspace,
-		),
+	
+	statusBar := g.Group().Layout(
+		g.ArrowButton("Open Statuses", g.DirectionDown).OnClick(ToggleStatusWindow),
+		g.Tooltip("Press to open status window"),
 	)
 
+	fullsizex,fullsizey:=wnd.GetSize()
+	//TODO: Figure out why setting position and size doesnt work
+	g.SingleWindow("Images").Flags(g.WindowFlagsNoBringToFrontOnFocus+g.WindowFlagsNoResize).Pos(0,0).Size(float32(fullsizex),float32(fullsizey)).Layout(
+		g.Line(
+			statusBar,
+			g.TabBar("TabBar").Layout(
+				CurrentWorkspace,
+			),
+		),
+	)
+	if StatusWindowShown {
+		buildStatusWindow()
+	}
 }
 
 func main() {
+	//Query the comms on and on forever
+	go func(){
+		for {
+			println("querying comms")
+			queryComms()
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}()
+
 	//Create Window
-	wnd := g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
+	wnd = g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
 	//Run it
 	wnd.Run(loop)
 
