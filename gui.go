@@ -35,10 +35,9 @@ func loop() {
 }
 
 func main() {
-	//Query the comms on and on forever
+	//Query the comms etc and forever
 	go func(){
 		for {
-			println("querying comms")
 			queryComms()
 			time.Sleep(1000 * time.Millisecond)
 		}
