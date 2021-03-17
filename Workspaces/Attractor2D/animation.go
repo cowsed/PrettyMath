@@ -3,6 +3,9 @@ package attractor2d
 import (
 	".."
 	"fmt"
+	"image/png"
+	"os"
+
 	"github.com/AllenDang/giu"
 	"math/rand"
 )
@@ -78,8 +81,8 @@ func (rw *randomWalker) deepCopy() animationMaker {
 	return &randomWalker{false, 0.3, labels, enableds, rw.stepSize}
 }
 func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
-	println("Making animation - animator")
 
+	processDescription := fmt.Sprintf("Renders %d frames of a random walk through parameter space.\nBegan at {time}", frameAmt)
 	communicator := processCreator()
 	//mabye defer close(communicator)
 	go func() {
@@ -89,17 +92,16 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 			println("Making animation - loop - goroutine")
 
 			amt := float64(f) / float64(frameAmt)
-			println("Making animation - loop - pre send - goroutine")
-			communicator <- workspace.ProgressUpdate{"Working", amt}
-			println("Making animation - loop - post send - goroutine")
+			communicator <- workspace.ProgressUpdate{"Working", processDescription, amt}
 
-			fmt.Printf("Making frame %d of %d (random walker)\n", f, frameAmt)
 			//Set Parameters
 			fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
-			r.path = fpath
-			println("Making animation - render - goroutine")
+			img := r.render()
 
-			r.render()
+			//Save image to file
+			f, _ := os.Create(fpath)
+			png.Encode(f, img)
+
 			var newa, newb, newc, newd, newx, newy float64
 			//Set up the next round
 			if rw.enableds[0] {
@@ -129,7 +131,7 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 			r.vars["x"] = newx
 			r.vars["y"] = newy
 		}
-		communicator <- workspace.ProgressUpdate{"End", 1.0}
+		communicator <- workspace.ProgressUpdate{"End", processDescription, 1.0}
 		//Notify user of finishing
 		fmt.Println("\n\n\n ---- Finished animation ----\n\n\n")
 		close(communicator)
@@ -140,7 +142,7 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 type parameterAlter struct {
 	//[]Expression Elements
 }
-
+//For now, doesnt do anything
 func (pa *parameterAlter) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
 	for f := 0; f < frameAmt; f++ {
 		fmt.Printf("Making frame %d of %d (Parameter Alterer)", f, frameAmt)
@@ -159,6 +161,7 @@ type buildUp struct {
 	percentPerFrame float32
 }
 
+//For now, Blocking
 func (bu *buildUp) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
 	startNumPoints := float64(r.numPoints)
 	for f := 0; f < frameAmt; f++ {
@@ -166,8 +169,12 @@ func (bu *buildUp) makeFrames(frameAmt int, outPath string, r renderer, processC
 		tempNumPoints := startNumPoints * (float64(f) / float64(frameAmt))
 		r.numPoints = int(tempNumPoints)
 		fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
-		r.path = fpath
-		r.render()
+		img := r.render()
+		
+		//Save image to file
+		f, _ := os.Create(fpath)
+		png.Encode(f, img)
+
 	}
 }
 func (bu *buildUp) makeSetup() giu.Widget {

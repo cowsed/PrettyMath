@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/png"
 	"math"
-	"os"
-	
-	"github.com/gen2brain/beeep"
+
 	ep "../../ExpressionParser"
 	"../../Tools"
 )
@@ -25,10 +22,9 @@ type renderer struct {
 	offx, offy    int
 	scaleFactor   float64
 	numPoints     int
-	path          string
 }
 
-func (r *renderer) render() {
+func (r *renderer) render() *image.RGBA {
 	//Setup
 	pointMap := make(map[[2]int]int)
 	var maxPointsPerCell = 1
@@ -89,23 +85,8 @@ func (r *renderer) render() {
 		}
 	}
 
-	f, _ := os.Create(r.path)
-	png.Encode(f, img)
-	
-	err := beeep.Alert("Render Finished", "Attractor 2D has finished rendering", r.path)
-	if err != nil {
-		panic(err)
-	}
-
+	return img
 }
-func (r *renderer) renderAsync() {
-	go func() {
-		r.render()
-	}()
-}
-
-
-
 
 //Helpful functions
 func minI(a, b int) int {
@@ -127,5 +108,5 @@ func inMap(key [2]int, m map[[2]int]int) bool {
 }
 
 func arrToRGBA(arr [4]float32) color.RGBA {
-	return color.RGBA{uint8(arr[0]*255), uint8(arr[1]*255), uint8(arr[2]*255), uint8(arr[3]*255)}
+	return color.RGBA{uint8(arr[0] * 255), uint8(arr[1] * 255), uint8(arr[2] * 255), uint8(arr[3] * 255)}
 }

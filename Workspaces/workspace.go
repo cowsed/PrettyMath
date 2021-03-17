@@ -4,5 +4,6 @@ package workspace
 
 type ProgressUpdate struct {
 	Status string
+	Description string
 	Amount float64
 }

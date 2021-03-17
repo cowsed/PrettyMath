@@ -3,13 +3,16 @@ package attractor2d
 import (
 	"fmt"
 	"image"
+	"image/png"
+	"os"
 	"strconv"
-	
-	
-	".."
+
+	g "github.com/AllenDang/giu"
+	"github.com/gen2brain/beeep"
+
+	".." //Workspaces
 	ep "../../ExpressionParser"
 	"../../Tools"
-	g "github.com/AllenDang/giu"
 )
 
 //Workspace is the workspace for generating 2-dimensional Attracors
@@ -75,9 +78,7 @@ type Workspace struct {
 	selectedAnimationIndex int32
 	selectedAnimation      animationMaker
 	animationFrames        int32
-	animationFolder string
-	
-	
+	animationFolder        string
 }
 
 //Init creates a new 2d attractor workspace with default parameters
@@ -86,16 +87,16 @@ func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdat
 
 	return Workspace{
 		processCreator: processCreator,
-		amOpen:        true,
-		connectPoints: false,
-		autoUpdate:    false,
-		onClose:       onCloseFunc,
-		numPoints:     1_000_000,
-		aString:       "0.65343",
-		bString:       "0.7345345",
-		cString:       "1.3",
-		dString:       "1.4",
-		gradient:      gradient,
+		amOpen:         true,
+		connectPoints:  false,
+		autoUpdate:     false,
+		onClose:        onCloseFunc,
+		numPoints:      1_000_000,
+		aString:        "0.65343",
+		bString:        "0.7345345",
+		cString:        "1.3",
+		dString:        "1.4",
+		gradient:       gradient,
 
 		x0Str:       "0.1",
 		y0Str:       "0.1",
@@ -117,7 +118,7 @@ func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdat
 		selectedAnimationIndex: 0,
 		selectedAnimation:      availableAnimations[0],
 		animationFrames:        60,
-		animationFolder: "GifExport/",
+		animationFolder:        "GifExport/",
 	}
 }
 
@@ -173,16 +174,23 @@ func (ws *Workspace) MakeRenderer() renderer {
 		int(float32(ws.imageWidth) * ws.offxPer), int(float32(ws.imageHeight) * ws.offyPer),
 		float64(ws.scaleFactor),
 		int(ws.numPoints),
-		"out.png",
 	}
 	return r
 }
-func (ws *Workspace) makeAnimation(){
-	println("Making animation - workspace")
-	r:=ws.MakeRenderer()
-	animator:=ws.selectedAnimation.deepCopy()
-	animator.makeFrames(int(ws.animationFrames),ws.animationFolder,r, ws.processCreator)
-	
+func (ws *Workspace) makeAnimation() {
+	ws.updateParams()
+	r := ws.MakeRenderer()
+	animator := ws.selectedAnimation.deepCopy()
+	animator.makeFrames(int(ws.animationFrames), ws.animationFolder, r, ws.processCreator)
+}
+func (ws *Workspace) makeImageAsync() {
+	ws.updateParams()
+	r := ws.MakeRenderer()
+	var img *image.RGBA
+	go func() {
+		img = r.render()
+		fmt.Println("What do you want to do with this image")
+	}()
 }
 
 //UpdateImageAuto updates the rendered image if auto update is on
@@ -195,13 +203,20 @@ func (ws *Workspace) UpdateImageAuto() {
 //CreateLoadImage completely rerenders and reloads the render
 func (ws *Workspace) CreateLoadImage() {
 	ws.updateParams()
+	//Render image
 	r := ws.MakeRenderer()
-	r.render()
+	img := r.render()
+	//Save image
+	f, _ := os.Create("out.png")
+	png.Encode(f, img)
 	ws.loadImage()
+	err := beeep.Alert("Render Finished", "Attractor 2D has finished rendering", "out.png")
+	if err != nil {
+		panic(err)
+	}
 	g.Update()
 
 }
-
 
 //Loads the image from an image.RGBA (for now a file) into a texture to display
 func (ws *Workspace) loadImage() {
@@ -219,7 +234,7 @@ func (ws *Workspace) Build() {
 	}
 	//Create the animation Creator section
 	var animationCreator = availableAnimations[ws.selectedAnimationIndex].makeSetup()
-	ws.selectedAnimation=availableAnimations[ws.selectedAnimationIndex]
+	ws.selectedAnimation = availableAnimations[ws.selectedAnimationIndex]
 	fullcanvas := g.Layout{
 		g.Custom(func() {
 			canvas := g.GetCanvas()

@@ -1,0 +1,10 @@
+GLSL Shader Editor
+Epicycles
+table of radii and periods
+modes:
+    - for generate path as fast as possible + colors )
+    - for make the animation and each frame like draw the next step with how big a step is controlled by something else
+
+2D L-Systems
+3D L-systems
+maybe versions with colors

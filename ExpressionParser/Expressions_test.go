@@ -2,6 +2,7 @@ package expressions_test
 
 import (
 	"fmt"
+
 	"math"
 	"path/filepath"
 	"reflect"
@@ -10,6 +11,7 @@ import (
 
 	"./."
 )
+
 
 func TestParseExpression1Result(t *testing.T) {
 	exp := "cos(2-2)"
@@ -20,6 +22,15 @@ func TestParseExpression1Eq(t *testing.T) {
 	exp := "cos(2-2)"
 	got := expressions.ParseExpression(exp, map[string]float64{})
 	equals(t, "cos((2-2))", got.BecomeString())
+}
+
+func BenchmarkParseExpression(b *testing.B) {
+	exp := "cos(2-2)"
+	got := expressions.ParseExpression(exp, map[string]float64{})
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        got.BecomeNumber(map[string]float64{})
+    }
 }
 
 func TestParseExpression2Result(t *testing.T) {
@@ -41,7 +52,7 @@ func TestParseExpression3Result(t *testing.T) {
 }
 func TestParseExpression3Eq(t *testing.T) {
 	exp := "a+b"
-	got := expressions.ParseExpression(exp, map[string]float64{"p": 3.1415})
+	got := expressions.ParseExpression(exp, map[string]float64{"a": 1, "b": 1, "p": 3.1415})
 	equals(t, "(a+b)", got.BecomeString())
 }
 
@@ -53,7 +64,8 @@ func TestParseExpression4Result(t *testing.T) {
 }
 func TestParseExpression4Eq(t *testing.T) {
 	exp := "x+sin(y)/b"
-	got := expressions.ParseExpression(exp, map[string]float64{})
+	vs := map[string]float64{"x": 2, "y": 0, "b": 3}
+	got := expressions.ParseExpression(exp, vs)
 	equals(t, "(x+(sin(y)/b))", got.BecomeString())
 }
 
