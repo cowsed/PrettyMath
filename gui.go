@@ -1,7 +1,9 @@
 package main
 
 import (
+	"github.com/AllenDang/giu/imgui"
 	"time"
+
 	g "github.com/AllenDang/giu"
 )
 
@@ -10,18 +12,20 @@ var CurrentWorkspace g.Widget = &NewWorkspace{}
 
 var wnd *g.MasterWindow
 
-
 //Create Top Level containers
 func loop() {
-	
 	statusBar := g.Group().Layout(
 		g.ArrowButton("Open Statuses", g.DirectionDown).OnClick(ToggleStatusWindow),
 		g.Tooltip("Press to open status window"),
 	)
 
-	fullsizex,fullsizey:=wnd.GetSize()
-	//TODO: Figure out why setting position and size doesnt work
-	g.SingleWindow("Images").Flags(g.WindowFlagsNoBringToFrontOnFocus+g.WindowFlagsNoDecoration).Pos(0,0).Size(float32(fullsizex),float32(fullsizey)).Layout(
+	fullsizex, fullsizey := wnd.GetSize()
+	
+
+	
+	imgui.SetNextWindowSize(imgui.Vec2{float32(fullsizex), float32(fullsizey)})
+	imgui.SetNextWindowPos(imgui.Vec2{0,0})
+	g.SingleWindow("Images").Layout(
 		g.Line(
 			statusBar,
 			g.TabBar("TabBar").Layout(
@@ -37,7 +41,7 @@ func loop() {
 
 func main() {
 	//Query the comms etc and forever
-	go func(){
+	go func() {
 		for {
 			queryComms()
 			time.Sleep(1000 * time.Millisecond)

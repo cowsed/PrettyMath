@@ -8,6 +8,7 @@ import (
 
 var statusWindowShown = false
 
+
 var dummyReciever = workspace.ProgressUpdate{Status: "Dummy", Amount: 0.75}
 var statuses []workspace.ProgressUpdate = []workspace.ProgressUpdate{}
 var communicators []chan workspace.ProgressUpdate = []chan workspace.ProgressUpdate{}
@@ -54,7 +55,8 @@ func queryComms() {
 
 //ToggleStatusWindow Toggles the visibility of the status window
 func ToggleStatusWindow() {
-	statusWindowShown = !statusWindowShown
+	statusWindowShown=!statusWindowShown
+
 }
 
 //Build the whole window
@@ -63,7 +65,7 @@ func buildStatusWindow() {
 	fmt.Println("comms", communicators)
 
 	if len(communicators) == 0 {
-		content=g.Label("No Running processes")
+		content = g.Label("No Running processes")
 	}
 	g.Window("Statuses").IsOpen(&statusWindowShown).Pos(400, 60).Layout(
 		content,
