@@ -18,7 +18,10 @@ import (
 //Workspace is the workspace for generating 2-dimensional Attracors
 type Workspace struct {
 	//Multi Threading stuff
-	processCreator func() chan workspace.ProgressUpdate
+	processCreator                   func() chan workspace.ProgressUpdate
+	currentlyRenderingAsynchronously bool
+	asynchronouslyRenderedImage      *image.RGBA
+	decisionPopupShown               bool
 
 	//General Settings
 	amOpen        bool //should be true usually
@@ -86,17 +89,19 @@ func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdat
 	gradient := tools.GradientInit()
 
 	return Workspace{
-		processCreator: processCreator,
-		amOpen:         true,
-		connectPoints:  false,
-		autoUpdate:     false,
-		onClose:        onCloseFunc,
-		numPoints:      1_000_000,
-		aString:        "0.65343",
-		bString:        "0.7345345",
-		cString:        "1.3",
-		dString:        "1.4",
-		gradient:       gradient,
+		processCreator:     processCreator,
+		decisionPopupShown: false,
+
+		amOpen:        true,
+		connectPoints: false,
+		autoUpdate:    false,
+		onClose:       onCloseFunc,
+		numPoints:     1_000_000,
+		aString:       "0.65343",
+		bString:       "0.7345345",
+		cString:       "1.3",
+		dString:       "1.4",
+		gradient:      gradient,
 
 		x0Str:       "0.1",
 		y0Str:       "0.1",
@@ -158,7 +163,8 @@ func (ws *Workspace) updateParams() {
 
 }
 
-func (ws *Workspace) MakeRenderer() renderer {
+//makeRenderer creates a renderer based on the parameters of the workspace
+func (ws *Workspace) makeRenderer() renderer {
 	//Deep copy variables
 	newVars := make(map[string]float64)
 	for k, v := range ws.Variables {
@@ -179,18 +185,24 @@ func (ws *Workspace) MakeRenderer() renderer {
 }
 func (ws *Workspace) makeAnimation() {
 	ws.updateParams()
-	r := ws.MakeRenderer()
+	r := ws.makeRenderer()
 	animator := ws.selectedAnimation.deepCopy()
 	animator.makeFrames(int(ws.animationFrames), ws.animationFolder, r, ws.processCreator)
 }
+
 func (ws *Workspace) makeImageAsync() {
-	ws.updateParams()
-	r := ws.MakeRenderer()
-	var img *image.RGBA
-	go func() {
-		img = r.render()
-		fmt.Println("What do you want to do with this image")
-	}()
+	if !ws.currentlyRenderingAsynchronously {
+		ws.updateParams()
+		r := ws.makeRenderer()
+		var img *image.RGBA
+		go func() {
+			img = r.render()
+			ws.asynchronouslyRenderedImage = img
+			ws.decisionPopupShown = true
+			//g.OpenPopup("Multi-threading Decision")
+
+		}()
+	}
 }
 
 //UpdateImageAuto updates the rendered image if auto update is on
@@ -204,7 +216,7 @@ func (ws *Workspace) UpdateImageAuto() {
 func (ws *Workspace) CreateLoadImage() {
 	ws.updateParams()
 	//Render image
-	r := ws.MakeRenderer()
+	r := ws.makeRenderer()
 	img := r.render()
 	//Save image
 	f, _ := os.Create("out.png")
@@ -226,12 +238,38 @@ func (ws *Workspace) loadImage() {
 	}()
 }
 
+//overwriteWithAsyncImage replaces the current image/texture with the image that was just rendered by 
+func (ws *Workspace) overwriteWithAsyncImage() {
+	f, _ := os.Create("out.png")
+	png.Encode(f, ws.asynchronouslyRenderedImage)
+	ws.loadImage()
+	g.CloseCurrentPopup()
+	ws.decisionPopupShown = false
+
+}
+//saveAsyncImage saves the asynchronously generated image 
+func (ws *Workspace) saveAsyncImage() {
+	f, _ := os.Create("out2.png")
+	png.Encode(f, ws.asynchronouslyRenderedImage)
+	g.CloseCurrentPopup()
+	ws.decisionPopupShown = false
+
+}
+
 //Build builds the workspace for use with giu
 func (ws *Workspace) Build() {
+	//Executre the specified function when this tab closes
 	if !ws.amOpen {
-		fmt.Println("Closing\n\n\n\n\n\n\n")
 		ws.onClose()
 	}
+
+	decisionGUI := g.PopupModal("Multi-threading Decision").IsOpen(&ws.decisionPopupShown).Flags(g.WindowFlagsNoTitleBar).Layout(
+		g.Label("An asynchrously rendered image has just completed. What would you like to do?"),
+		g.Line(
+			g.Button("Save to a backup file (out2.png)").OnClick(ws.saveAsyncImage),
+			g.Button("Overwrite currently drawn image").OnClick(ws.overwriteWithAsyncImage),
+		),
+	)
 	//Create the animation Creator section
 	var animationCreator = availableAnimations[ws.selectedAnimationIndex].makeSetup()
 	ws.selectedAnimation = availableAnimations[ws.selectedAnimationIndex]
@@ -300,11 +338,13 @@ func (ws *Workspace) Build() {
 		).Flags(g.TreeNodeFlagsFramed),
 	)
 
+	//Build it all
 	g.TabItem("2D Attractors").Layout(
 
 		g.Line(
 			g.Button("Regenerate").OnClick(ws.CreateLoadImage), g.Tooltip("Regenerate Image"),
 			g.Checkbox("Auto-update", &ws.autoUpdate), g.Tooltip("Update On Parameter Change"),
+			g.Button("Regenerate Async").OnClick(ws.makeImageAsync), g.Tooltip("Regenerate the current image asynchrously"),
 			//g.Button("Expand All").OnClick(ExpandAll), g.Tooltip("Expand all parameter windows"),
 		),
 		g.SplitLayout("A2D MainSplit", g.DirectionHorizontal, true, 300,
@@ -312,5 +352,9 @@ func (ws *Workspace) Build() {
 			fullcanvas,
 		),
 	).IsOpen(&ws.amOpen).Build()
-
+	decisionGUI.Build()
+	//Show the decision popup if necessary
+	if ws.decisionPopupShown {
+		g.OpenPopup("Multi-threading Decision")
+	}
 }

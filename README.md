@@ -15,7 +15,7 @@ y=ynew
 Features:
 - fine control over output parameters
 - moderately functioning parser for math expressions (mostly a mess right now)
-- limited gradient support (for now just hardcoded)
+- Gradient Support! (I really like how this turned out)
 
 Sources:
 - AllenDang's giu and imgui libraries

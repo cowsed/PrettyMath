@@ -12,7 +12,7 @@ import (
 
 var availableAnimationTitles []string = []string{"Random Walk", "Parameter Functions", "BuildUp"}
 
-var baseRandomWalker = RandomWalkerInit()
+var baseRandomWalker = randomWalkerInit()
 var availableAnimations []animationMaker = []animationMaker{&baseRandomWalker, &parameterAlter{}, &buildUp{5}}
 
 type animationMaker interface {
@@ -31,7 +31,7 @@ type randomWalker struct {
 }
 
 //RandomWalkerInit creates a default Random Walker
-func RandomWalkerInit() randomWalker {
+func randomWalkerInit() randomWalker {
 	return randomWalker{
 		skipBlanks:        false,
 		skipBlanksPercent: 0.3,

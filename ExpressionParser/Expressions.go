@@ -1,3 +1,4 @@
+//Package expressions is a mathematical expression library for math related thing
 //Important - fix power and function parsing - also add error checking
 package expressions
 
@@ -263,7 +264,7 @@ func compileExpression(tokens []string, Vars map[string]float64) []ExpressionEle
 
 	return outputQueue
 }
-
+//CompileError is for now empty but will eventually hold errors for compiling or parsing
 type CompileError struct{
 	
 }

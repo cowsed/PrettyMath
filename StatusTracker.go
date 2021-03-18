@@ -2,33 +2,25 @@ package main
 
 import (
 	"./Workspaces"
-	//"fmt"
+	"fmt"
 	g "github.com/AllenDang/giu"
 )
 
-var StatusWindowShown = false
+var statusWindowShown = false
+
 var dummyReciever = workspace.ProgressUpdate{Status: "Dummy", Amount: 0.75}
 var statuses []workspace.ProgressUpdate = []workspace.ProgressUpdate{}
 var communicators []chan workspace.ProgressUpdate = []chan workspace.ProgressUpdate{}
 
-//Having to buffer the channels probably isnt the best idea but since
+//AddProcess creates a new process status receiver and adds it to the slices that keep track
 func AddProcess() chan workspace.ProgressUpdate {
 	//Create communication channel
 	//TODO tell  user to stop if theres a lot going >= number of cores on machine
 	//Buffer size of 5 just cuz
 	c := make(chan workspace.ProgressUpdate, 5)
 	communicators = append(communicators, c)
-	statuses = append(statuses, workspace.ProgressUpdate{"No Info Yet","No description", 0.0})
+	statuses = append(statuses, workspace.ProgressUpdate{"No Info Yet", "No description", 0.0})
 	return c
-}
-
-func removeStatus(s []workspace.ProgressUpdate, i int) []workspace.ProgressUpdate {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
-}
-func removeComm(s []chan workspace.ProgressUpdate, i int) []chan workspace.ProgressUpdate {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
 }
 
 func queryComms() {
@@ -45,9 +37,11 @@ func queryComms() {
 				defer func() {
 					communicators = removeComm(communicators, i)
 					statuses = removeStatus(statuses, i)
-					//This causes problems because it will try to access at i but if the previous iteration removed something it is now out of range
+					//This causes problems because it will try to access at i but if the previous iteration removed something
+					//it is now out of range
 					//OOh, I know. Defer
 				}()
+				doUpdate = true
 			}
 		default:
 			//No Value just keep going
@@ -56,25 +50,28 @@ func queryComms() {
 	if doUpdate {
 		g.Update()
 	}
-
 }
 
 //ToggleStatusWindow Toggles the visibility of the status window
 func ToggleStatusWindow() {
-	StatusWindowShown = !StatusWindowShown
+	statusWindowShown = !statusWindowShown
 }
 
 //Build the whole window
 func buildStatusWindow() {
-	println("building status window")
-	g.Window("Statuses").IsOpen(&StatusWindowShown).Pos(400, 60).Layout(
-		g.Label("No Running processes"),
-		//&dummyReciever, //.makeInfo(),
+	var content g.Widget
+	fmt.Println("comms", communicators)
+
+	if len(communicators) == 0 {
+		content=g.Label("No Running processes")
+	}
+	g.Window("Statuses").IsOpen(&statusWindowShown).Pos(400, 60).Layout(
+		content,
 		BuildAllStatuses(),
 	)
 }
 
-//Build all of the statuses known
+//BuildAllStatuses builds all of the statuses known for imgui
 func BuildAllStatuses() g.Widget {
 
 	//needed for rangebuilder
@@ -90,4 +87,14 @@ func BuildAllStatuses() g.Widget {
 			return w
 		})
 	return widget
+}
+
+//Helper functions for dealing with workers
+func removeStatus(s []workspace.ProgressUpdate, i int) []workspace.ProgressUpdate {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+func removeComm(s []chan workspace.ProgressUpdate, i int) []chan workspace.ProgressUpdate {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
 }

@@ -21,7 +21,7 @@ func loop() {
 
 	fullsizex,fullsizey:=wnd.GetSize()
 	//TODO: Figure out why setting position and size doesnt work
-	g.SingleWindow("Images").Flags(g.WindowFlagsNoBringToFrontOnFocus+g.WindowFlagsNoResize).Pos(0,0).Size(float32(fullsizex),float32(fullsizey)).Layout(
+	g.SingleWindow("Images").Flags(g.WindowFlagsNoBringToFrontOnFocus+g.WindowFlagsNoDecoration).Pos(0,0).Size(float32(fullsizex),float32(fullsizey)).Layout(
 		g.Line(
 			statusBar,
 			g.TabBar("TabBar").Layout(
@@ -29,9 +29,10 @@ func loop() {
 			),
 		),
 	)
-	if StatusWindowShown {
+	if statusWindowShown {
 		buildStatusWindow()
 	}
+
 }
 
 func main() {
