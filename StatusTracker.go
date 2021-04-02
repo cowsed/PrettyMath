@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./Workspaces"
+	"github.com/cowsed/PrettyMath/Workspaces"
 	"fmt"
 	g "github.com/AllenDang/giu"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/AllenDang/giu"
 
-	ep "../../ExpressionParser"
+	ep "github.com/cowsed/PrettyMath/ExpressionParser"
 )
 
 type Workspace struct {

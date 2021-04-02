@@ -1,7 +1,7 @@
 package attractor2d
 
 import (
-	".."
+	"github.com/cowsed/PrettyMath/Workspaces"
 	"fmt"
 	"image/png"
 	"os"

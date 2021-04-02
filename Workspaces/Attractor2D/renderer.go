@@ -6,8 +6,8 @@ import (
 	"image/color"
 	"math"
 
-	ep "../../ExpressionParser"
-	"../../Tools"
+	ep "github.com/cowsed/PrettyMath/ExpressionParser"
+	"github.com/cowsed/PrettyMath/Tools"
 )
 
 //asyncRenderer holds all the parameters needed to render asynchornously without carrying the extra bagage of all the gui stuff

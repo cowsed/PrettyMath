@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/AllenDang/giu/imgui"
 	"time"
+	ocl "github.com/cowsed/PrettyMath/Workspaces/OpenCL"
 
 	g "github.com/AllenDang/giu"
 )
@@ -21,7 +22,6 @@ func loop() {
 
 	fullsizex, fullsizey := wnd.GetSize()
 	
-
 	
 	imgui.SetNextWindowSize(imgui.Vec2{float32(fullsizex), float32(fullsizey)})
 	imgui.SetNextWindowPos(imgui.Vec2{0,0})
@@ -48,6 +48,8 @@ func main() {
 		}
 	}()
 
+	var start = (ocl.Init(onClose))
+	CurrentWorkspace = &start
 	//Create Window
 	wnd = g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
 	//Run it

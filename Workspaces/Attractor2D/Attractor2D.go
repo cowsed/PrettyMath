@@ -10,9 +10,9 @@ import (
 	g "github.com/AllenDang/giu"
 	"github.com/gen2brain/beeep"
 
-	".." //Workspaces
-	ep "../../ExpressionParser"
-	"../../Tools"
+	"github.com/cowsed/PrettyMath/Workspaces" //Workspaces
+	ep "github.com/cowsed/PrettyMath/ExpressionParser"
+	"github.com/cowsed/PrettyMath/Tools"
 )
 
 //Workspace is the workspace for generating 2-dimensional Attracors

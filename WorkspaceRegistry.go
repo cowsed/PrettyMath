@@ -1,8 +1,9 @@
 package main
 
 import (
-	plot "./Workspaces/2DPlotter"
-	a2d "./Workspaces/Attractor2D"
+	plot "github.com/cowsed/PrettyMath/Workspaces/2DPlotter"
+	a2d "github.com/cowsed/PrettyMath/Workspaces/Attractor2D"
+	ocl "github.com/cowsed/PrettyMath/Workspaces/OpenCL"
 	g "github.com/AllenDang/giu"
 )
 
@@ -17,6 +18,7 @@ func (c *NewWorkspace) Build() {
 		g.Label("Create New: "),
 		g.Button("New 2D Attractor").OnClick(c.SetA2D),
 		g.Button("New Plot").OnClick(c.SetPlot),
+		g.Button("New OpenCL").OnClick(c.SetOpenCL),
 	).Build()
 }
 
@@ -29,6 +31,12 @@ func (c *NewWorkspace) SetA2D() {
 //SetPlot opens the plotting workspace
 func (c *NewWorkspace) SetPlot() {
 	p := plot.Init(onClose)
+	CurrentWorkspace = &p
+}
+
+//SetPlot opens the plotting workspace
+func (c *NewWorkspace) SetOpenCL() {
+	p := ocl.Init(onClose)
 	CurrentWorkspace = &p
 }
 
