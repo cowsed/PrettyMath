@@ -5,6 +5,8 @@ import (
 	a2d "github.com/cowsed/PrettyMath/Workspaces/Attractor2D"
 	ocl "github.com/cowsed/PrettyMath/Workspaces/OpenCL"
 	g "github.com/AllenDang/giu"
+	
+	"runtime"
 )
 
 //NewWorkspace is an empty struct (to fulfill g.Widget)for a page that allows the creation of workspaces
@@ -43,4 +45,5 @@ func (c *NewWorkspace) SetOpenCL() {
 //The closing function that gets passed to workspaces to remove themselves and replace themselves with the creation tab
 func onClose() {
 	CurrentWorkspace = &NewWorkspace{}
+	runtime.GC()
 }

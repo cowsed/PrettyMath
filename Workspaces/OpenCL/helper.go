@@ -9,8 +9,34 @@ import (
 	"github.com/AllenDang/giu/imgui"
 	"github.com/jgillich/go-opencl/cl"
 	re "regexp"
-	//"strings"
+	"strings"
 )
+
+//findTypes extracts the types from a kernel function definition that matches kernel name
+func findNamesAndTypes(kernelName, kernelSource string) ([]string, []string) {
+	var argFinder = re.MustCompile(`__kernel void `+kernelName+`\(([a-zA-Z_\s0-9,])*`)
+	inds:=argFinder.FindAllIndex([]byte(kernelSource), -1)
+	header:=kernelSource[inds[0][0]+len("__kernel void "+kernelName+"("):inds[0][1]]
+
+	types:= strings.Split(header, ",")
+	names:=make([]string, len(types))
+	for i,t :=range types{
+		fmt.Printf("%dth type: %s \n", i, t)
+		if t=="\n"{
+			//continue if an empty line
+			continue
+		}
+		//Get all elements that arent the last (name) and rejoin them
+		types[i]=strings.ReplaceAll(t,"\n","")
+		parts:=strings.Split(types[i], " ")
+		types[i]=strings.Join(parts[:len(parts)-1]," ")
+		names[i] = parts[len(parts)-1]
+	}
+	
+	return names, types
+	
+}
+
 var lineFinder = re.MustCompile(`\d+:\d+:\d+: (note: |error: )`)
 
 

@@ -6,13 +6,16 @@ package opencl_renderer
 //Have a global section where you can define all buffers (and maybe shared parameters)
 //For per pipe parameter section have a way of showing it inherits from the global parameters via the opencl paramater name
 //For those that dont match have the corresponding input variety from imgui
-
+//For any buffer if there is any parameter that matches something like parameter_(something), put something in the section that requires a rebuild
+//(Variables that are declared to be of type image2d_t or image3d_t refer to image memory objects. These can only be specified as arguments to a function. Elements of an image cannot be directly accessed.)
 import (
 	"fmt"
 	"image"
-	//"image/color"
-
+	"image/png"
 	"log"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
@@ -21,20 +24,26 @@ import (
 
 var baseProgram = `__kernel void blur(
   __write_only image2d_t image,
-  const unsigned int Width,
-  const unsigned int Height
+  const float posx,
+  const float posy,
+  const float scale
 ) {
 
+  int2 size = get_image_dim(image);
+  int Width = size.x;
+  int Height = size.y;
+  
   int id = get_global_id(0);
   int idx = id % Width;
   int idy = id / Width;
 
-  bool mask=(((idx/16)%2) +  ((idy/16)%2))%2==0;
   
-  float4 col = (float4)(1,1,1,1)*mask;
+  //bool mask=(((idx/scale)%2) +  ((idy/scale)%2))%2==0;
+  
+  float4 col = (float4)(1,0,0.0,1);//*(float4)(mask,mask,mask,true);
   write_imagef(image, (int2)(idx,idy), col);
-
 }
+
 `
 
 type Workspace struct {
@@ -54,12 +63,21 @@ type Workspace struct {
 	width, height int32
 	outputTex     *giu.Texture
 
+	//Parameters
+	pos   [2]float32
+	scale float32
+
 	//CL Stuff
-	contextCL *cl.Context
-	queueCL   *cl.CommandQueue
-	deviceCL  *cl.Device
-	kernelCL  *cl.Kernel
-	errorsCL  string
+	contextCL      *cl.Context
+	queueCL        *cl.CommandQueue
+	deviceCL       *cl.Device
+	kernelCL       *cl.Kernel
+	errorsCL       string
+	buffersCurrent bool
+
+	parameterNames []string
+	parameterTypes []string
+	parameterData  []string
 
 	//Parameters
 	imageBuffers []*cl.MemObject
@@ -74,8 +92,8 @@ func Init(onCloseFunc func()) Workspace {
 		onClose:       onCloseFunc,
 		programSource: baseProgram,
 		programName:   "blur",
-		width:         400,
-		height:        300,
+		width:         1366,
+		height:        768,
 	}
 	_, ws.deviceCL, ws.contextCL, ws.queueCL = makeCLContext()
 	ws.selfOnCloses = []func(){ws.contextCL.Release, ws.queueCL.Release}
@@ -90,11 +108,85 @@ func Init(onCloseFunc func()) Workspace {
 	ws.editor.SetText(ws.programSource)
 	ws.editor.SetShowWhitespaces(false)
 	ws.editor.SetTabSize(2)
+	ws.makeParameters()
 
 	return ws
 }
 
-func (ws *Workspace) BuildProgram() (*cl.Kernel, error) {
+func (ws *Workspace) makeParameters() {
+	names, types := findNamesAndTypes(ws.programName, ws.programSource)
+	ws.parameterNames = names
+	fmt.Println("names", ws.parameterNames)
+	ws.parameterTypes = types
+	fmt.Println("types", ws.parameterTypes)
+
+	//If a new parameter is added the previous values can not be used
+	if len(ws.parameterData) != len(ws.parameterTypes) {
+		ws.parameterData = make([]string, len(types))
+	}
+}
+
+//A *very* naive way of interpreting opencl __kernel function signature info and turning it into a []interface{} for cl.SetArgs()
+//This is very naive because it cant determine if a thing is a qualifier or a type specifier (unsigned)
+func (ws *Workspace) makeParameterData() ([]interface{}, error) {
+	data := make([]interface{}, 0)
+	bufferI := 0
+	for i, t := range ws.parameterTypes {
+		parts := strings.Split(strings.TrimSpace(t), " ")
+		fmt.Println("Parts: ", parts)
+		qualifier := parts[0]
+		fmt.Println("qualified as", qualifier)
+		actualType := strings.Join(parts[1:], " ")
+		actualType = strings.TrimSpace(actualType)
+		fmt.Println("actually:", actualType)
+		switch actualType {
+		case "unsigned int":
+			//var val uint32
+			val, err := strconv.ParseUint(ws.parameterData[i], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, uint32(val))
+		case "float":
+			//var val float32
+			fmt.Println("Found: const float")
+			val, err := strconv.ParseFloat(ws.parameterData[i], 32)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, float32(val))
+		case "image2d_t":
+			log.Println("UNDEFINED BEHAVIOUR sorta")
+			//If there are not enough buffers
+			if bufferI >= len(ws.imageBuffers) {
+				return nil, fmt.Errorf("Mismath between desired and found buffers")
+			}
+			data = append(data, ws.imageBuffers[bufferI])
+			bufferI++
+
+		}
+	}
+	fmt.Println("Data: ")
+	for _, d := range data {
+		fmt.Printf("%v - %T\n", d, d)
+	}
+	return data, nil
+}
+
+func (ws *Workspace) PrepareBuffers() {
+	rect := image.Rectangle{image.Point{0, 0}, image.Point{int(ws.width), int(ws.height)}}
+	image1 := image.NewRGBA(rect)
+	ws.images = append(ws.images, image1)
+
+	image1Buffer, err := ws.contextCL.CreateImageSimple(cl.MemReadWrite|cl.MemUseHostPtr, int(ws.width), int(ws.height), cl.ChannelOrderRGBA, cl.ChannelDataTypeUNormInt8, image1.Pix)
+	ws.selfOnCloses = append(ws.selfOnCloses, image1Buffer.Release)
+	check(err)
+
+	ws.imageBuffers = append(ws.imageBuffers, image1Buffer)
+}
+
+func (ws *Workspace) BuildProgram()  {
+	ws.programSource = ws.editor.GetText()
 	//Reset errors
 	ws.errorsCL = ""
 	ws.errMarkers = imgui.NewErrorMarkers()
@@ -103,7 +195,7 @@ func (ws *Workspace) BuildProgram() (*cl.Kernel, error) {
 	program, err := ws.contextCL.CreateProgramWithSource([]string{ws.programSource})
 	if err != nil {
 		fmt.Println("Failling hard")
-		return nil, fmt.Errorf("Failed Building Program somehow")
+		fmt.Errorf("Failed Building Program somehow err: %v",err.Error())
 	}
 	fmt.Println("Succeed hard")
 
@@ -114,7 +206,9 @@ func (ws *Workspace) BuildProgram() (*cl.Kernel, error) {
 
 		ws.errMarkers = parseCLErrors(ws.errorsCL)
 		ws.editor.SetErrorMarkers(ws.errMarkers)
-		return nil, err
+		ws.releaseOnFinish()
+
+		log.Fatalf(err.Error())
 	}
 	fmt.Println("Built program")
 
@@ -140,42 +234,36 @@ func (ws *Workspace) BuildProgram() (*cl.Kernel, error) {
 		}
 	}
 	if err != nil {
-		return nil, err
+		ws.releaseOnFinish()
+		log.Fatalf(err.Error())
+		return
 	}
-	return kernel, nil
 
-}
+	ws.kernelCL=kernel
 
-func (ws *Workspace) PrepareBuffers() {
-	rect := image.Rectangle{image.Point{0, 0}, image.Point{int(ws.width), int(ws.height)}}
-	image1 := image.NewRGBA(rect)
-	fmt.Println("Image Length", len(image1.Pix))
-	ws.images = append(ws.images, image1)
-
-	image1Buffer, err := ws.contextCL.CreateImageSimple(cl.MemReadWrite|cl.MemUseHostPtr, int(ws.width), int(ws.height), cl.ChannelOrderRGBA, cl.ChannelDataTypeUNormInt8, image1.Pix)
-	ws.onFinish = append(ws.onFinish, image1Buffer.Release)
-	check(err)
-
-	ws.imageBuffers = append(ws.imageBuffers, image1Buffer)
 }
 
 func (ws *Workspace) Run() {
-
-	ws.programSource = ws.editor.GetText()
-	fmt.Println(ws.programSource)
-	var err error
-	ws.kernelCL, err = ws.BuildProgram()
-	if err != nil {
-		ws.releaseOnFinish()
+	if ws.queueCL==nil||ws.kernelCL==nil{
+		fmt.Println("Program is not built/initialized")
 		return
 	}
-	//Reset then prepare buffers
-	ws.imageBuffers = []*cl.MemObject{}
-	ws.images = []*image.RGBA{}
+	if !ws.buffersCurrent {
+		//Reset then prepare buffers
+		ws.imageBuffers = []*cl.MemObject{}
+		ws.images = []*image.RGBA{}
 
-	ws.PrepareBuffers()
+		ws.PrepareBuffers()
+		ws.buffersCurrent=true
 
-	err = ws.kernelCL.SetArgs(ws.imageBuffers[0], ws.width, ws.height)
+	}
+
+	argsData, err := ws.makeParameterData()
+	fmt.Println(argsData)
+	if err != nil {
+		return
+	}
+	err = ws.kernelCL.SetArgs(argsData...)
 	if err != nil {
 		ws.releaseOnFinish()
 		fmt.Println("imageBuffers", len(ws.imageBuffers), "[0]", ws.imageBuffers[0])
@@ -206,11 +294,14 @@ func (ws *Workspace) Run() {
 		fmt.Println("Finished making tex")
 		check(err)
 	}()
-
+	
 	ws.releaseOnFinish()
 	giu.Update()
 }
 
+
+
+//releases appropriate cl memory objects to avoid memory leaks
 func (ws *Workspace) releaseOnFinish() {
 	//Release all necessary things
 	for _, f := range ws.onFinish {
@@ -218,6 +309,10 @@ func (ws *Workspace) releaseOnFinish() {
 	}
 }
 
+func (ws *Workspace) Save() {
+	f, _ := os.Create("out.png")
+	png.Encode(f, ws.images[0])
+}
 func (ws *Workspace) Build() {
 	if !ws.amOpen {
 		//Release Everything
@@ -226,22 +321,32 @@ func (ws *Workspace) Build() {
 			fmt.Println("Releasing")
 			f()
 		}
+		ws.releaseOnFinish()
 	}
-
 
 	giu.TabItem("OpenCL Pipeline").Layout(
 		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 700,
 			giu.Group().Layout(
-				giu.Button("Run").OnClick(ws.Run),
+				giu.Line(
+					giu.Button("Build").OnClick(ws.BuildProgram),
+					giu.Button("Run").OnClick(ws.Run),
+					giu.Button("Save Image").OnClick(ws.Save),
+				),
+				giu.Custom(ws.buildParameterInputs),
 				giu.Custom(func() {
 					ws.editor.Render("OpenCl", imgui.Vec2{0, 0}, true)
+					if ws.editor.IsTextChanged() {
+						ws.programSource = ws.editor.GetText()
+						fmt.Println("Update Parameters")
+						ws.makeParameters()
+					}
 				},
 				),
 			),
 			giu.Custom(func() {
 				size := imgui.ContentRegionAvail()
 				aspectRatio := float32(ws.width) / float32(ws.height)
-				fmt.Println("newSize", size.X, size.X/aspectRatio)
+
 				giu.Group().Layout(
 					giu.Image(ws.outputTex).Size(size.X, size.X/aspectRatio),
 					giu.Label("Its possible your image is just transparent"),
@@ -249,4 +354,15 @@ func (ws *Workspace) Build() {
 			}),
 		),
 	).IsOpen(&ws.amOpen).Build()
+}
+func (ws *Workspace) buildParameterInputs() {
+	for i, t := range ws.parameterTypes {
+		if imgui.InputText(ws.parameterNames[i], &ws.parameterData[i]) {
+			ws.Run()
+		}
+		giu.Tooltip(ws.parameterNames[i] + " tooltip").Layout(
+			giu.Label("Type: " + t),
+		).Build()
+
+	}
 }

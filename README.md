@@ -2,8 +2,13 @@
 ![Most Recent](https://github.com/cowsed/PrettyMath/blob/main/Gallery/2.png?raw=true)
 ![Made a while ago](https://github.com/cowsed/PrettyMath/blob/main/image.png?raw=true)
 
+## Opencl workspace
+Opencl pipeline 
+feature list coming soon
 
-For now just a way of doing 2D attractors in the form of
+## 2D attractors 
+in the form of
+
 ```
 xnew=f(x,y,a,b,c,d)
 ynew=g(x,y,a,b,c,d)
