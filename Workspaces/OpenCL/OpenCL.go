@@ -14,7 +14,7 @@ import (
 	"image/png"
 	"log"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 
 	"github.com/AllenDang/giu"
@@ -75,9 +75,7 @@ type Workspace struct {
 	errorsCL       string
 	buffersCurrent bool
 
-	parameterNames []string
-	parameterTypes []string
-	parameterData  []string
+	args []ClDataHolder
 
 	//Parameters
 	imageBuffers []*cl.MemObject
@@ -92,8 +90,9 @@ func Init(onCloseFunc func()) Workspace {
 		onClose:       onCloseFunc,
 		programSource: baseProgram,
 		programName:   "blur",
-		width:         1366,
-		height:        768,
+		width:         800,
+		height:        600,
+		args:          []ClDataHolder{},
 	}
 	_, ws.deviceCL, ws.contextCL, ws.queueCL = makeCLContext()
 	ws.selfOnCloses = []func(){ws.contextCL.Release, ws.queueCL.Release}
@@ -108,72 +107,60 @@ func Init(onCloseFunc func()) Workspace {
 	ws.editor.SetText(ws.programSource)
 	ws.editor.SetShowWhitespaces(false)
 	ws.editor.SetTabSize(2)
+
 	ws.makeParameters()
 
 	return ws
 }
 
 func (ws *Workspace) makeParameters() {
-	names, types := findNamesAndTypes(ws.programName, ws.programSource)
-	ws.parameterNames = names
-	fmt.Println("names", ws.parameterNames)
-	ws.parameterTypes = types
-	fmt.Println("types", ws.parameterTypes)
-
-	//If a new parameter is added the previous values can not be used
-	if len(ws.parameterData) != len(ws.parameterTypes) {
-		ws.parameterData = make([]string, len(types))
+	names, types, err := findNamesAndTypes(ws.programName, ws.programSource)
+	if err != nil {
+		return
 	}
-}
-
-//A *very* naive way of interpreting opencl __kernel function signature info and turning it into a []interface{} for cl.SetArgs()
-//This is very naive because it cant determine if a thing is a qualifier or a type specifier (unsigned)
-func (ws *Workspace) makeParameterData() ([]interface{}, error) {
-	data := make([]interface{}, 0)
+	if len(names) != len(types) {
+		return
+	}
+	ws.args = make([]ClDataHolder, 0)
 	bufferI := 0
-	for i, t := range ws.parameterTypes {
+	for i, t := range types {
+		//Clean up stuff
 		parts := strings.Split(strings.TrimSpace(t), " ")
 		fmt.Println("Parts: ", parts)
 		qualifier := parts[0]
 		fmt.Println("qualified as", qualifier)
 		actualType := strings.Join(parts[1:], " ")
 		actualType = strings.TrimSpace(actualType)
-		fmt.Println("actually:", actualType)
+
 		switch actualType {
 		case "unsigned int":
-			//var val uint32
-			val, err := strconv.ParseUint(ws.parameterData[i], 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			data = append(data, uint32(val))
+			ws.args = append(ws.args, &CLUint32Input{0, names[i], t})
+
 		case "float":
-			//var val float32
 			fmt.Println("Found: const float")
-			val, err := strconv.ParseFloat(ws.parameterData[i], 32)
-			if err != nil {
-				return nil, err
-			}
-			data = append(data, float32(val))
+
+			ws.args = append(ws.args, &CLFloatInput{0, names[i], t})
+
 		case "image2d_t":
 			log.Println("UNDEFINED BEHAVIOUR sorta")
 			//If there are not enough buffers
 			if bufferI >= len(ws.imageBuffers) {
-				return nil, fmt.Errorf("Mismath between desired and found buffers")
+				fmt.Println(" p r o b le m a t ic")
+				return
+				//return nil, fmt.Errorf("Mismath between desired and found buffers")
 			}
-			data = append(data, ws.imageBuffers[bufferI])
+			ws.args = append(ws.args, &CLImageInput{"imageThing", bufferI, names[i], types[i]})
 			bufferI++
+			
 
 		}
+
 	}
-	fmt.Println("Data: ")
-	for _, d := range data {
-		fmt.Printf("%v - %T\n", d, d)
-	}
-	return data, nil
+	fmt.Println("there are",len(ws.args),"args made")
 }
 
 func (ws *Workspace) PrepareBuffers() {
+	fmt.Println("Preparing buffers")
 	rect := image.Rectangle{image.Point{0, 0}, image.Point{int(ws.width), int(ws.height)}}
 	image1 := image.NewRGBA(rect)
 	ws.images = append(ws.images, image1)
@@ -185,7 +172,7 @@ func (ws *Workspace) PrepareBuffers() {
 	ws.imageBuffers = append(ws.imageBuffers, image1Buffer)
 }
 
-func (ws *Workspace) BuildProgram()  {
+func (ws *Workspace) BuildProgram() {
 	ws.programSource = ws.editor.GetText()
 	//Reset errors
 	ws.errorsCL = ""
@@ -195,7 +182,7 @@ func (ws *Workspace) BuildProgram()  {
 	program, err := ws.contextCL.CreateProgramWithSource([]string{ws.programSource})
 	if err != nil {
 		fmt.Println("Failling hard")
-		fmt.Errorf("Failed Building Program somehow err: %v",err.Error())
+		fmt.Errorf("Failed Building Program somehow err: %v", err.Error())
 	}
 	fmt.Println("Succeed hard")
 
@@ -208,7 +195,8 @@ func (ws *Workspace) BuildProgram()  {
 		ws.editor.SetErrorMarkers(ws.errMarkers)
 		ws.releaseOnFinish()
 
-		log.Fatalf(err.Error())
+		log.Println(err.Error())
+		return
 	}
 	fmt.Println("Built program")
 
@@ -239,12 +227,12 @@ func (ws *Workspace) BuildProgram()  {
 		return
 	}
 
-	ws.kernelCL=kernel
+	ws.kernelCL = kernel
 
 }
 
 func (ws *Workspace) Run() {
-	if ws.queueCL==nil||ws.kernelCL==nil{
+	if ws.queueCL == nil || ws.kernelCL == nil {
 		fmt.Println("Program is not built/initialized")
 		return
 	}
@@ -254,21 +242,17 @@ func (ws *Workspace) Run() {
 		ws.images = []*image.RGBA{}
 
 		ws.PrepareBuffers()
-		ws.buffersCurrent=true
+		ws.buffersCurrent = true
 
 	}
 
-	argsData, err := ws.makeParameterData()
-	fmt.Println(argsData)
-	if err != nil {
-		return
-	}
-	err = ws.kernelCL.SetArgs(argsData...)
-	if err != nil {
-		ws.releaseOnFinish()
-		fmt.Println("imageBuffers", len(ws.imageBuffers), "[0]", ws.imageBuffers[0])
-		fmt.Println("FailedArg set: ", err.Error())
-		return
+	for i, d := range ws.args {
+		err := d.SetArg(i, ws.kernelCL, ws)
+		if err != nil {
+			log.Println(i, "th arguement error", err.Error())
+			ws.releaseOnFinish()
+			break
+		}
 	}
 
 	local, err := ws.kernelCL.WorkGroupSize(ws.deviceCL)
@@ -294,12 +278,10 @@ func (ws *Workspace) Run() {
 		fmt.Println("Finished making tex")
 		check(err)
 	}()
-	
+
 	ws.releaseOnFinish()
 	giu.Update()
 }
-
-
 
 //releases appropriate cl memory objects to avoid memory leaks
 func (ws *Workspace) releaseOnFinish() {
@@ -356,13 +338,8 @@ func (ws *Workspace) Build() {
 	).IsOpen(&ws.amOpen).Build()
 }
 func (ws *Workspace) buildParameterInputs() {
-	for i, t := range ws.parameterTypes {
-		if imgui.InputText(ws.parameterNames[i], &ws.parameterData[i]) {
-			ws.Run()
-		}
-		giu.Tooltip(ws.parameterNames[i] + " tooltip").Layout(
-			giu.Label("Type: " + t),
-		).Build()
-
+	//fmt.Println("Making",len(ws.args), "args")
+	for _, dh := range ws.args {
+		dh.Build(ws)
 	}
 }

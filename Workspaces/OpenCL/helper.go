@@ -12,10 +12,73 @@ import (
 	"strings"
 )
 
+//Type interface
+
+type ClDataHolder interface{
+	Build(ws *Workspace) 
+	SetArg(index int, k *cl.Kernel, ws *Workspace) error
+}
+//Float input
+type CLFloatInput struct{
+	value float32
+	name string
+	typeName string
+}
+
+func (dh *CLFloatInput) Build(ws *Workspace) {
+	//Maybe add tooltip that can be used to control secondary parameters
+	if imgui.DragFloatV(dh.name, &dh.value, 0.001, -1000,1000,"%.4f",1){
+		ws.Run()
+	}
+}
+func (dh *CLFloatInput) SetArg(index int, k *cl.Kernel, ws *Workspace) error {
+	err:=k.SetArgFloat32(index, dh.value)
+	return err
+}
+//Uint32 input
+type CLUint32Input struct{
+	value int32
+	name string
+	typeName string
+}
+func (dh *CLUint32Input) Build(ws *Workspace) {
+	//Maybe add tooltip that can be used to control secondary parameters
+	if imgui.DragInt(dh.name, &dh.value) {
+		ws.Run()
+	}
+}
+func (dh *CLUint32Input) SetArg(index int, k *cl.Kernel, ws *Workspace) error {
+	err:=k.SetArgUint32(index, uint32(dh.value))
+	return err
+}
+
+//Image buffer input
+type CLImageInput struct{
+	identifier string
+	index int
+	name string
+	typeName string
+}
+func (dh *CLImageInput) Build(ws *Workspace) {
+	//Maybe add tooltip that can be used to control secondary parameters
+	if imgui.InputText(dh.name, &dh.identifier) {
+	ws.Run()
+	}
+}
+func (dh *CLImageInput) SetArg(index int, k *cl.Kernel, ws *Workspace) error {
+	err:=k.SetArgBuffer(index, ws.imageBuffers[dh.index])
+	return err
+}
+
+
+
 //findTypes extracts the types from a kernel function definition that matches kernel name
-func findNamesAndTypes(kernelName, kernelSource string) ([]string, []string) {
+func findNamesAndTypes(kernelName, kernelSource string) ([]string, []string, error) {
 	var argFinder = re.MustCompile(`__kernel void `+kernelName+`\(([a-zA-Z_\s0-9,])*`)
 	inds:=argFinder.FindAllIndex([]byte(kernelSource), -1)
+	if len(inds)==0{
+	return nil,nil,fmt.Errorf("No Parameters found. Thats weird")
+	}
 	header:=kernelSource[inds[0][0]+len("__kernel void "+kernelName+"("):inds[0][1]]
 
 	types:= strings.Split(header, ",")
@@ -33,7 +96,7 @@ func findNamesAndTypes(kernelName, kernelSource string) ([]string, []string) {
 		names[i] = parts[len(parts)-1]
 	}
 	
-	return names, types
+	return names, types, nil
 	
 }
 

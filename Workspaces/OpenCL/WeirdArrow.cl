@@ -2,9 +2,7 @@ __kernel void blur(
   __write_only image2d_t image,
   const float posx,
   const float posy,
-  const float scale,
-  const unsigned int Width,
-  const unsigned int Height
+  const float scale
 ) {
   int id = get_global_id(0);
   int idx = id % Width;
