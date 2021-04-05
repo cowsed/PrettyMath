@@ -20,31 +20,16 @@ import (
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
 	"github.com/jgillich/go-opencl/cl"
+	"io/ioutil"
 )
 
-var baseProgram = `__kernel void blur(
-  __write_only image2d_t image,
-  const float posx,
-  const float posy,
-  const float scale
-) {
-
-  int2 size = get_image_dim(image);
-  int Width = size.x;
-  int Height = size.y;
-  
-  int id = get_global_id(0);
-  int idx = id % Width;
-  int idy = id / Width;
-
-  
-  //bool mask=(((idx/scale)%2) +  ((idy/scale)%2))%2==0;
-  
-  float4 col = (float4)(1,0,0.0,1);//*(float4)(mask,mask,mask,true);
-  write_imagef(image, (int2)(idx,idy), col);
+func loadFile(fname string) string {
+	content, err := ioutil.ReadFile(fname)
+	check(err)
+	return string(content)
 }
 
-`
+var baseProgram = loadFile("Workspaces/OpenCL/mandelbrot.cl")
 
 type Workspace struct {
 	amOpen  bool
@@ -73,6 +58,7 @@ type Workspace struct {
 	deviceCL       *cl.Device
 	kernelCL       *cl.Kernel
 	errorsCL       string
+	programCurrent bool
 	buffersCurrent bool
 
 	args []ClDataHolder
@@ -108,6 +94,9 @@ func Init(onCloseFunc func()) Workspace {
 	ws.editor.SetShowWhitespaces(false)
 	ws.editor.SetTabSize(2)
 
+	ws.PrepareBuffers()
+	ws.buffersCurrent = true
+
 	ws.makeParameters()
 
 	return ws
@@ -121,6 +110,7 @@ func (ws *Workspace) makeParameters() {
 	if len(names) != len(types) {
 		return
 	}
+	oldArgs := ws.args[:]
 	ws.args = make([]ClDataHolder, 0)
 	bufferI := 0
 	for i, t := range types {
@@ -132,14 +122,58 @@ func (ws *Workspace) makeParameters() {
 		actualType := strings.Join(parts[1:], " ")
 		actualType = strings.TrimSpace(actualType)
 
+		oldArgAvailable := i < len(oldArgs)
+
 		switch actualType {
 		case "unsigned int":
-			ws.args = append(ws.args, &CLUint32Input{0, names[i], t})
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLUint32Input{0, names[i], 0,4,actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
+		case "int":
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLInt32Input{0, names[i], 0,4,actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
 
 		case "float":
 			fmt.Println("Found: const float")
-
-			ws.args = append(ws.args, &CLFloatInput{0, names[i], t})
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLFloatInput{0,-100,100,0.001, names[i], actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
+		case "float3":
+			fmt.Println("Found: const float3")
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLFloatVecInput{[]float32{0.0,0.0,0.0},3,-100,100,0.001, names[i], actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
+		case "float2":
+			fmt.Println("Found: const float2")
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLFloatVecInput{[]float32{0.0,0.0},2,-100,100,0.001, names[i], actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
 
 		case "image2d_t":
 			log.Println("UNDEFINED BEHAVIOUR sorta")
@@ -149,14 +183,20 @@ func (ws *Workspace) makeParameters() {
 				return
 				//return nil, fmt.Errorf("Mismath between desired and found buffers")
 			}
-			ws.args = append(ws.args, &CLImageInput{"imageThing", bufferI, names[i], types[i]})
+			var newArg ClDataHolder
+			if oldArgAvailable && oldArgs[i].getType() == actualType {
+				newArg = oldArgs[i]
+			} else {
+				newArg = &CLImageInput{"imageThing", bufferI, names[i], false, actualType}
+			}
+			newArg.setName(names[i])
+			ws.args = append(ws.args, newArg)
 			bufferI++
-			
 
 		}
 
 	}
-	fmt.Println("there are",len(ws.args),"args made")
+	fmt.Println("there are", len(ws.args), "args made")
 }
 
 func (ws *Workspace) PrepareBuffers() {
@@ -228,6 +268,7 @@ func (ws *Workspace) BuildProgram() {
 	}
 
 	ws.kernelCL = kernel
+	ws.programCurrent=true
 
 }
 
@@ -275,7 +316,6 @@ func (ws *Workspace) Run() {
 	go func() {
 
 		ws.outputTex, err = giu.NewTextureFromRgba(ws.images[0])
-		fmt.Println("Finished making tex")
 		check(err)
 	}()
 
@@ -295,6 +335,8 @@ func (ws *Workspace) Save() {
 	f, _ := os.Create("out.png")
 	png.Encode(f, ws.images[0])
 }
+
+var data = []float32{1.0,2.0,3.0}
 func (ws *Workspace) Build() {
 	if !ws.amOpen {
 		//Release Everything
@@ -305,12 +347,18 @@ func (ws *Workspace) Build() {
 		}
 		ws.releaseOnFinish()
 	}
-
+	
+	buildStatus:=" "
+	if !ws.programCurrent{
+		buildStatus="*"
+	}
+	
 	giu.TabItem("OpenCL Pipeline").Layout(
+
 		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 700,
 			giu.Group().Layout(
 				giu.Line(
-					giu.Button("Build").OnClick(ws.BuildProgram),
+					giu.Button("Build"+buildStatus).OnClick(ws.BuildProgram),
 					giu.Button("Run").OnClick(ws.Run),
 					giu.Button("Save Image").OnClick(ws.Save),
 				),
@@ -319,6 +367,8 @@ func (ws *Workspace) Build() {
 					ws.editor.Render("OpenCl", imgui.Vec2{0, 0}, true)
 					if ws.editor.IsTextChanged() {
 						ws.programSource = ws.editor.GetText()
+						ws.programCurrent=false
+
 						fmt.Println("Update Parameters")
 						ws.makeParameters()
 					}
@@ -339,7 +389,16 @@ func (ws *Workspace) Build() {
 }
 func (ws *Workspace) buildParameterInputs() {
 	//fmt.Println("Making",len(ws.args), "args")
-	for _, dh := range ws.args {
-		dh.Build(ws)
+	open := imgui.TreeNodeV("Paramaters", imgui.TreeNodeFlagsFramed)
+	if open {
+		imgui.Text("Right-click for more information")
+
+		for _, dh := range ws.args {
+
+			dh.Build(ws)
+
+		}
+		imgui.TreePop()
 	}
+
 }
