@@ -45,39 +45,21 @@ cmplx csqr(cmplx a){
   return newCmplx(x,y);
 }
 
-bool equals(cmplx a, cmplx b){
-  return a.real==b.real&&a.imag==b.imag;
-}
-bool equalsApprox(cmplx a, cmplx b, float epsilon){
-  return fabs(a.real-b.real)<=epsilon&&fabs(a.imag-b.imag)<epsilon;
-}
 
-int checkIfInLog(cmplx orbitLog[40], int logLen, cmplx a, float epsilon){
-  for (int i=0; i<logLen; i++){
-    if (equalsApprox(a,orbitLog[i],epsilon)){
-      return logLen-i;
-    }
-  }
-  //Not found
-  return -1;
-}
-float iterate(int max_iteration, float radius, float x, float y, float n, float epsilon){
 
+float iterate(int max_iteration, float2 c, float radius, float x, float y, float n)
+{
   int id=get_global_id(0);
-  cmplx c = newCmplx(x,y);
   cmplx z = newCmplx(x,y);
-  
-  
-  cmplx orbitLog[40];
-  int orbitLogLength = 0;
-  
+  cmplx cComp = newCmplx(c.x,c.y);
+
   int iteration = 0;
 
   float amt;
 
   while (clen(z) < radius&& iteration < max_iteration){
     cmplx zp = cpow(z,n);
-    z=cadd(zp,c);
+    z=cadd(zp,cComp);
 
 
     iteration++;
@@ -86,28 +68,24 @@ float iterate(int max_iteration, float radius, float x, float y, float n, float 
     if (iteration == max_iteration){ // Belongs to the set
       break;
     } 
-    int period=checkIfInLog(orbitLog, orbitLogLength, z, epsilon);
-    if (period!=-1){
-      iteration=(int)((float)period/20.0);
+    if (iteration==max_iteration){
+
       break;
-    } else if(orbitLogLength<40){
-      orbitLog[orbitLogLength]=z;
-      orbitLogLength++;
-    }
+    } 
   }
   return amt;
 }
 __kernel void fractal(
   __write_only image2d_t image,
   const float n,
+  const float2 c,
   const float2 pos,
   const float scaleInv,
   const unsigned int iterations,
   const float radius,
   const float3 bgcol,
   const float3 fgcol,
-  const unsigned int SSAmtI,
-  const float epsilon
+  const unsigned int SSAmtI
 ) {
   int id = get_global_id(0);
   
@@ -138,7 +116,7 @@ __kernel void fractal(
   
       float2 pos2 = uv*scale + pos;
 
-      float amt =iterate(iterations,radius, pos2.x,pos2.y,n,epsilon);
+      float amt =iterate(iterations,c, radius, pos2.x,pos2.y,n);
       float3 col = mix(bgcol, fgcol, amt);
       sumCol+=col;
     }

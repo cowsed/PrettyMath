@@ -1,0 +1,4 @@
+It doess run when things are changed
+does not update image
+
+also the part that shows that a program is not yet built is broke

@@ -1,10 +1,14 @@
 package opencl_renderer
 
 import (
+	"fmt"
 	"unsafe"
 
 	"github.com/AllenDang/giu/imgui"
 	"github.com/jgillich/go-opencl/cl"
+
+	"github.com/cowsed/PrettyMath/Tools"
+
 )
 
 //Type interface
@@ -28,7 +32,9 @@ func (dh *CLFloatInput) Build(ws *Workspace) {
 	//Maybe add tooltip that can be used to control secondary parameters
 	//Last arguement is wonky because =the imgui package is slightly oout of dat and 1<<5 is loarytmic scale
 	if imgui.DragFloatV(dh.name+" : "+dh.typeName, &dh.value, dh.step, dh.min, dh.max, "%.4f", 0) {
+		fmt.Println("Running via float")
 		ws.Run()
+		//fmt.Println("Texture is now",ws.)
 	}
 	if imgui.BeginPopupContextItemV(dh.name+" "+dh.typeName, 1) {
 		imgui.BeginGroup()
@@ -45,6 +51,7 @@ func (dh *CLFloatInput) Build(ws *Workspace) {
 	}
 }
 func (dh *CLFloatInput) SetArg(index int, k *cl.Kernel, ws *Workspace) error {
+	fmt.Println("Setting arg: ", dh.value)
 	err := k.SetArgFloat32(index, dh.value)
 	return err
 }
@@ -71,7 +78,7 @@ func (dh *CLFloatVecInput) Build(ws *Workspace) {
 	//Maybe add tooltip that can be used to control secondary parameters
 	//Last arguement is wonky because =the imgui package is slightly oout of dat and 1<<5 is loarytmic scale
 	//DragFloatN("TestN", data, 0.01,-10,10,"%.3f")
-	if DragFloatN(dh.name+" : "+dh.typeName, dh.values, dh.step, dh.min, dh.max, "%.4f") {
+	if tools.DragFloatN(dh.name+" : "+dh.typeName, dh.values, dh.step, dh.min, dh.max, "%.4f") {
 		ws.Run()
 	}
 	if imgui.BeginPopupContextItemV(dh.name+" "+dh.typeName, 1) {
@@ -182,6 +189,7 @@ type CLImageInput struct {
 	index      int
 	name       string
 	show       bool
+	width, height int32
 	typeName   string
 }
 
@@ -201,7 +209,8 @@ func (dh *CLImageInput) Build(ws *Workspace) {
 	imgui.EndGroup()
 	if imgui.BeginPopupContextItemV(dh.name+" "+dh.typeName, 1) {
 
-		imgui.Text("More information")
+		imgui.InputInt("Image width",&dh.width)
+		imgui.InputInt("Image height",&dh.height)
 		imgui.EndPopup()
 	}
 }
