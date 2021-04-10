@@ -26,7 +26,7 @@ func findNamesAndTypes(kernelName, kernelSource string) ([]string, []string, err
 	types := strings.Split(header, ",")
 	names := make([]string, len(types))
 	for i, t := range types {
-		fmt.Printf("%dth type: %s \n", i, t)
+		//fmt.Printf("%dth type: %s \n", i, t)
 		if t == "\n" {
 			//continue if an empty line
 			continue

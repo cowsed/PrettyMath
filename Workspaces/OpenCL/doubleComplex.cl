@@ -32,10 +32,10 @@ cmplx cpowc(cmplx u, cmplx v){
   float r = length((float2)(u.imag, u.real));
   float resReal, resImag; 
 
-    resReal=pow(r,v.real) * cos(u.real*angle) *
+    resReal=pow(r,v.real) * cos(v.real*angle) *
   pow((float)M_E,-v.imag*angle);
   
-  resImag=pow(r,v.real) * sin(u.real*angle) * 
+  resImag=pow(r,v.real) * sin(v.real*angle) * 
   pow((float)M_E,-v.imag*angle);
   
   cmplx z = newCmplx(resReal, resImag);
@@ -78,8 +78,7 @@ float iterate(int max_iteration, float radius, float x, float y, float2 n)
   
   int iteration = 0;
 
-  float amt;
-  if (clen(z)>=radius){return 0;}
+  float amt=0;
   while (clen(z) < radius&& iteration < max_iteration){
     cmplx zp = cpowc(z,nCmplx);
     z=cadd(zp,cComp);
@@ -91,10 +90,7 @@ float iterate(int max_iteration, float radius, float x, float y, float2 n)
     if (iteration == max_iteration){ // Belongs to the set
       break;
     } 
-    if (clen(z)>=radius){
-      amt=0;
-      break;
-    } 
+
   }
   return amt;
 }

@@ -24,6 +24,27 @@ cmplx cpow(cmplx c, float n){
 }
 
 
+//Raise a complex to a complex number
+  //r^a *(cis(a*angle )) *e^-b*angle
+
+cmplx cpowc(cmplx u, cmplx v){
+  float angle = atan2(u.imag, u.real);
+  float r = length((float2)(u.imag, u.real));
+  float resReal, resImag; 
+
+    resReal=pow(r,v.real) * cos(v.real*angle) *
+  pow((float)M_E,-v.imag*angle);
+  
+  resImag=pow(r,v.real) * sin(v.real*angle) * 
+  pow((float)M_E,-v.imag*angle);
+  
+  cmplx z = newCmplx(resReal, resImag);
+  //cmplx z = u*res;
+  
+  
+  return z;
+}
+
 cmplx cadd(cmplx a, cmplx b){
   float aa,ab,ba,bb;
   aa=real(a);
@@ -45,39 +66,22 @@ cmplx csqr(cmplx a){
   return newCmplx(x,y);
 }
 
-bool equals(cmplx a, cmplx b){
-  return a.real==b.real&&a.imag==b.imag;
-}
-bool equalsApprox(cmplx a, cmplx b, float epsilon){
-  return fabs(a.real-b.real)<=epsilon&&fabs(a.imag-b.imag)<epsilon;
-}
 
-int checkIfInLog(cmplx orbitLog[40], int logLen, cmplx a, float epsilon){
-  for (int i=0; i<logLen; i++){
-    if (equalsApprox(a,orbitLog[i],epsilon)){
-      return logLen-i;
-    }
-  }
-  //Not found
-  return -1;
-}
-float iterate(int max_iteration, float radius, float x, float y, float n, float epsilon){
 
+float iterate(int max_iteration, float radius, float x, float y, float2 n)
+{
   int id=get_global_id(0);
-  cmplx c = newCmplx(x,y);
   cmplx z = newCmplx(x,y);
-  
-  
-  cmplx orbitLog[40];
-  int orbitLogLength = 0;
+  cmplx cComp = newCmplx(x,y);
+
+  cmplx nCmplx = newCmplx(n.x,n.y);
   
   int iteration = 0;
 
   float amt=0;
-
   while (clen(z) < radius&& iteration < max_iteration){
-    cmplx zp = cpow(z,n);
-    z=cadd(zp,c);
+    cmplx zp = cpowc(z,nCmplx);
+    z=cadd(zp,cComp);
 
 
     iteration++;
@@ -86,28 +90,20 @@ float iterate(int max_iteration, float radius, float x, float y, float n, float 
     if (iteration == max_iteration){ // Belongs to the set
       break;
     } 
-    int period=checkIfInLog(orbitLog, orbitLogLength, z, epsilon);
-    if (period!=-1){
-      iteration=(int)((float)period/20.0);
-      break;
-    } else if(orbitLogLength<40){
-      orbitLog[orbitLogLength]=z;
-      orbitLogLength++;
-    }
+
   }
   return amt;
 }
 __kernel void fractal(
   __write_only image2d_t image,
-  const float n,
+  const float2 n,
   const float2 pos,
   const float scaleInv,
   const unsigned int iterations,
   const float radius,
   const float3 bgcol,
   const float3 fgcol,
-  const unsigned int SSAmtI,
-  const float epsilon
+  const unsigned int SSAmtI
 ) {
   int id = get_global_id(0);
   
@@ -125,6 +121,7 @@ __kernel void fractal(
   int idx = id % Width;
   int idy = (id / Width);
 
+  float aspectRatio = ((float)Width / (float)Height);
 
   float x0 = ((float)idx)/(float)Width;
   float y0 = ((float)idy)/(float)Height;
@@ -136,15 +133,25 @@ __kernel void fractal(
       float y = y0+(offY/SSAmt)/(float)Height;
       float2 uv = (float2)(x,y)-(float2)(0.5);
   
-      float2 pos2 = uv*scale + pos;
+      float2 pos2 = uv*(float2)(aspectRatio,1)*scale + pos;
 
-      float amt =iterate(iterations,radius, pos2.x,pos2.y,n,epsilon);
+      float amt =iterate(iterations, radius, pos2.x,pos2.y,n);
       float3 col = mix(bgcol, fgcol, amt);
       sumCol+=col;
     }
   }
 
   sumCol/=(float)(SSAmt*SSAmt);
+  
+
+  float2 uv = (float2)(x0,y0)-(float2)(0.5);
+  float2 pos2 = uv*(float2)(aspectRatio,1)*scale + pos;
+  float2 new = fmod(fabs(pos2),1.);
+  
+  float tolerance = 0.01;
+  if (new.x<=tolerance || new.y<=tolerance){
+    sumCol = (float3)(1.0,0.0,0.0);
+  }
 
   write_imagef(image, (int2)(idx,idy), (float4)(sumCol,1));
 }

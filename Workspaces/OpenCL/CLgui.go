@@ -24,7 +24,8 @@ func (ws *Workspace) Build() {
 		buildStatus = "*"
 	}
 
-	
+	fmt.Printf("program arglength is %d\n", len(ws.programs[0].programArgs))
+
 	giu.TabItem("OpenCL Pipeline").Layout(
 
 		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 700,
@@ -37,7 +38,7 @@ func (ws *Workspace) Build() {
 				giu.TabBar("Programs").Layout(
 					giu.Custom(func(){
 						for i:=range(ws.programs){
-							ws.programs[i].Build()
+							ws.programs[i].Build(ws)
 						}
 					}),
 				),

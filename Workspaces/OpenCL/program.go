@@ -24,58 +24,58 @@ type CLProgram struct {
 	errorsCL string
 	kernelCL *cl.Kernel
 
-	ws *Workspace
+	//ws *Workspace
 }
 
-func (p CLProgram) Build() {
+func (p *CLProgram) Build(ws *Workspace) {
 	giu.TabItem(p.programName+" Program").Layout(
-		giu.Custom(p.buildParameterInputs),
+		giu.Custom(func(){p.buildParameterInputs(ws)}),
 		giu.Custom(func() {
 			p.editor.Render("OpenCl", imgui.Vec2{0, 0}, true)
 			if p.editor.IsTextChanged() {
 				p.programSource = p.editor.GetText()
 				p.current = false
-				p.ws.programsCurrent=false
+				ws.programsCurrent=false
 				//p.ws.checkPrograms()
-				fmt.Println("chdcking programs",p.ws.programsCurrent)
 				fmt.Println("Update Parameters")
-				p.makeParameters()
+				p.makeParameters(ws)
 			}
 		}),
 	).Build()
 }
-func (p *CLProgram) getWorkGroupSizes() ([]int, []int) {
-	local, err := p.kernelCL.WorkGroupSize(p.ws.deviceCL)
+func (p *CLProgram) getWorkGroupSizes(ws *Workspace) ([]int, []int) {
+	local, err := p.kernelCL.WorkGroupSize(ws.deviceCL)
 	check(err)
 
-	global := int(p.ws.width * p.ws.height)
-	d := int(p.ws.width) * int(p.ws.height) % local
+	global := int(ws.width * ws.height)
+	d := int(ws.width) * int(ws.height) % local
 	if d != 0 {
 		global += local - d
 	}
 
 	return []int{global}, []int{local}
 }
-func (p *CLProgram) setArgs() {
+func (p *CLProgram) setArgs(ws *Workspace) {
 	fmt.Println("Setting Args")
 	for i, dh := range p.programArgs {
-		err := dh.SetArg(i, p.kernelCL, p.ws)
+		err := dh.SetArg(i, p.kernelCL, ws)
 		if err != nil {
 			fmt.Println(i, "th arguement error", err.Error())
-			p.ws.releaseOnFinish()
+			ws.releaseOnFinish()
 			break
 		}
 	}
 }
 
-func (p *CLProgram) BuildProgram() {
+func (p *CLProgram) BuildProgram(ws *Workspace) {
+
 	p.programSource = p.editor.GetText()
 	//Reset errors
 	p.errorsCL = ""
 	p.errMarkers = imgui.NewErrorMarkers()
 	p.editor.SetErrorMarkers(p.errMarkers)
 
-	program, err := p.ws.contextCL.CreateProgramWithSource([]string{p.programSource})
+	program, err := ws.contextCL.CreateProgramWithSource([]string{p.programSource})
 	if err != nil {
 		fmt.Println("Failling hard")
 	}
@@ -88,7 +88,7 @@ func (p *CLProgram) BuildProgram() {
 
 		p.errMarkers = parseCLErrors(p.errorsCL)
 		p.editor.SetErrorMarkers(p.errMarkers)
-		p.ws.releaseOnFinish()
+		ws.releaseOnFinish()
 
 		fmt.Println(err.Error())
 		return
@@ -117,7 +117,7 @@ func (p *CLProgram) BuildProgram() {
 		}
 	}
 	if err != nil {
-		p.ws.releaseOnFinish()
+		ws.releaseOnFinish()
 		fmt.Println(err.Error())
 		panic(err)
 		return
@@ -129,7 +129,7 @@ func (p *CLProgram) BuildProgram() {
 }
 
 //Setup Text Editor
-func (p *CLProgram) initEditor() {
+func (p *CLProgram) initEditor(ws *Workspace) {
 
 	p.errMarkers = imgui.NewErrorMarkers()
 
@@ -142,20 +142,22 @@ func (p *CLProgram) initEditor() {
 	p.editor.SetTabSize(2)
 }
 
-func (p *CLProgram) buildParameterInputs() {
+func (p *CLProgram) buildParameterInputs(ws *Workspace) {
 	open := imgui.TreeNodeV("Paramaters", imgui.TreeNodeFlagsFramed)
 	if open {
 		imgui.Text("Right-click for more information")
 
 		for _, dh := range p.programArgs {
-			dh.Build(p.ws)
+			dh.Build(ws)
 		}
 		imgui.TreePop()
 	}
 
 }
 
-func (p *CLProgram) makeParameters() {
+func (p *CLProgram) makeParameters(ws *Workspace) {
+	fmt.Printf("My name is %p\n",p)
+
 	names, types, err := findNamesAndTypes(p.programName, p.programSource)
 	fmt.Println("names:", names)
 	if err != nil {
@@ -170,7 +172,7 @@ func (p *CLProgram) makeParameters() {
 	for i, t := range types {
 		//Clean up stuff
 		parts := strings.Split(strings.TrimSpace(t), " ")
-		fmt.Println("Parts: ", parts)
+		//fmt.Println("Parts: ", parts)
 		qualifier := parts[0]
 		fmt.Println("qualified as", qualifier)
 		actualType := strings.Join(parts[1:], " ")
@@ -184,7 +186,7 @@ func (p *CLProgram) makeParameters() {
 			if oldArgAvailable && oldArgs[i].getType() == actualType {
 				newArg = oldArgs[i]
 			} else {
-				newArg = &CLUint32Input{0, names[i], 0, 4, actualType}
+				newArg = &CLUint32Input{0, names[i], 0, 1, actualType}
 			}
 			newArg.setName(names[i])
 			p.programArgs = append(p.programArgs, newArg)
@@ -199,7 +201,7 @@ func (p *CLProgram) makeParameters() {
 			p.programArgs = append(p.programArgs, newArg)
 
 		case "float":
-			fmt.Println("Found: const float")
+			//fmt.Println("Found: const float")
 			var newArg ClDataHolder
 			if oldArgAvailable && oldArgs[i].getType() == actualType {
 				newArg = oldArgs[i]
@@ -209,7 +211,7 @@ func (p *CLProgram) makeParameters() {
 			newArg.setName(names[i])
 			p.programArgs = append(p.programArgs, newArg)
 		case "float3":
-			fmt.Println("Found: const float3")
+			//fmt.Println("Found: const float3")
 			var newArg ClDataHolder
 			if oldArgAvailable && oldArgs[i].getType() == actualType {
 				newArg = oldArgs[i]
@@ -219,7 +221,7 @@ func (p *CLProgram) makeParameters() {
 			newArg.setName(names[i])
 			p.programArgs = append(p.programArgs, newArg)
 		case "float2":
-			fmt.Println("Found: const float2")
+			//fmt.Println("Found: const float2")
 			var newArg ClDataHolder
 			if oldArgAvailable && oldArgs[i].getType() == actualType {
 				newArg = oldArgs[i]
@@ -232,7 +234,7 @@ func (p *CLProgram) makeParameters() {
 		case "image2d_t":
 			fmt.Println("UNDEFINED BEHAVIOUR sorta")
 			//If there are not enough buffers
-			if bufferI >= len(p.ws.imageBuffers) {
+			if bufferI >= len(ws.imageBuffers) {
 				fmt.Println(" p r o b le m a t ic")
 				return
 				//return nil, fmt.Errorf("Mismath between desired and found buffers")

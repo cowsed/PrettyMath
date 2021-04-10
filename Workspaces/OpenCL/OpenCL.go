@@ -31,7 +31,7 @@ type Workspace struct {
 	selfOnCloses []func() //Functions to run when the workspace is closed
 	onFinish     []func() //Releases/Mem Management to run when the rendering of frames is over
 
-	programs        []CLProgram
+	programs        []*CLProgram
 	programsCurrent bool
 
 	//Output Image Stuff
@@ -61,7 +61,7 @@ func Init(onCloseFunc func()) Workspace {
 	ws := Workspace{
 		amOpen:   true,
 		onClose:  onCloseFunc,
-		programs: []CLProgram{prog},
+		programs: []*CLProgram{&prog},
 		width:    800,
 		height:   600,
 		args:     []ClDataHolder{},
@@ -75,16 +75,15 @@ func Init(onCloseFunc func()) Workspace {
 	fmt.Println("images", ws.images)
 
 	for i := range ws.programs {
-		ws.programs[i].ws = &ws
-		ws.programs[i].initEditor()
-		ws.programs[i].makeParameters()
+		//ws.programs[i].ws = &ws
+		ws.programs[i].initEditor(&ws)
+		ws.programs[i].makeParameters(&ws)
 	}
 
 	return ws
 }
 
 func (ws *Workspace) PrepareBuffers() {
-	ws.UpdateProgramReferences(ws)
 
 	fmt.Println("Preparing buffers")
 	rect := image.Rectangle{image.Point{0, 0}, image.Point{int(ws.width), int(ws.height)}}
@@ -97,16 +96,11 @@ func (ws *Workspace) PrepareBuffers() {
 
 	ws.imageBuffers = append(ws.imageBuffers, image1Buffer)
 }
-func (ws *Workspace) UpdateProgramReferences(ptr *Workspace) {
-	for i := range ws.programs {
-		//Update references to workspace
-		ws.programs[i].ws = ptr
-	}
-}
+
 func (ws *Workspace) BuildPrograms() {
 	ws.programsCurrent = true
 	for i := range ws.programs {
-		ws.programs[i].BuildProgram()
+		ws.programs[i].BuildProgram(ws)
 		if ws.programs[i].current == false {
 			//There was probably an error
 			ws.programsCurrent = false
@@ -116,7 +110,6 @@ func (ws *Workspace) BuildPrograms() {
 }
 func (ws *Workspace) checkPrograms() {
 	//ws.programsCurrent = true
-	ws.UpdateProgramReferences(ws)
 	for i := range ws.programs {
 		if ws.programs[i].current == false {
 			fmt.Println("Found not current program")
@@ -127,11 +120,11 @@ func (ws *Workspace) checkPrograms() {
 
 func (ws *Workspace) Run() {
 	fmt.Println("Running\n\n\n====")
-	ws.UpdateProgramReferences(ws)
 	kernelsReady := true
 	//ws.programsCurrent = true
 
 	for i := range ws.programs {
+		fmt.Println("Pre Program is ",&(ws.programs[i]))
 		if ws.programs[i].kernelCL == nil {
 			kernelsReady = false
 		}
@@ -157,8 +150,8 @@ func (ws *Workspace) Run() {
 	}
 
 	for i := range ws.programs {
-		ws.programs[i].setArgs()
-		global, local := ws.programs[i].getWorkGroupSizes()
+		ws.programs[i].setArgs(ws)
+		global, local := ws.programs[i].getWorkGroupSizes(ws)
 		e, err := ws.queueCL.EnqueueNDRangeKernel(ws.programs[i].kernelCL, nil, global, local, nil)
 		e.Release()
 		if err != nil {
@@ -176,7 +169,6 @@ func (ws *Workspace) Run() {
 	go func() {
 		before := ws.outputTex
 
-		ws.outputTex = nil
 		ws.outputTex, err = giu.NewTextureFromRgba(ws.images[0])
 		fmt.Println("Made tex. err:", err)
 		fmt.Println("Before", before, "After:", ws.outputTex)
