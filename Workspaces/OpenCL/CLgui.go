@@ -7,6 +7,8 @@ import (
 	"github.com/AllenDang/giu/imgui"
 	"github.com/cowsed/PrettyMath/Tools"
 )
+var testAnim tools.Float32Animator = tools.NewFloat32Animator()
+
 
 func (ws *Workspace) Build() {
 	if !ws.amOpen {
@@ -24,16 +26,19 @@ func (ws *Workspace) Build() {
 		buildStatus = "*"
 	}
 
-	fmt.Printf("program arglength is %d\n", len(ws.programs[0].programArgs))
-
 	giu.TabItem("OpenCL Pipeline").Layout(
-
+		//tools.NewFloat32AnimatorWidget(&testAnim),
+		
 		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 700,
 			giu.Group().Layout(
 				giu.Line(
 					giu.Button("Build"+buildStatus).OnClick(ws.BuildPrograms),
 					giu.Button("Run").OnClick(ws.Run),
 					giu.Button("Save Image").OnClick(ws.Save),
+				),
+				giu.Line(
+					giu.InputInt("Frames",&ws.desiredFrames),
+					giu.Button("Make Animation").OnClick(ws.makeAnim),
 				),
 				giu.TabBar("Programs").Layout(
 					giu.Custom(func(){
@@ -51,6 +56,7 @@ func (ws *Workspace) Build() {
 					giu.Image(ws.outputTex).Size(size.X, size.X/aspectRatio),
 					giu.Label("Its possible your image is just transparent"),
 					giu.Button("Copy to clipboard").OnClick(ws.copyImageBuffer),
+					giu.Label(fmt.Sprintf("Frame: %d",ws.currentFrame)),
 				).Build()
 			}),
 		),

@@ -20,7 +20,8 @@ float imag(cmplx a){
 cmplx cpow(cmplx c, float n){
   float a = real(c);
   float b = imag(c);
-  return newCmplx(pow((pow(a,2.0f)+pow(b,2.0f)),(n/2) )*(cos(n *atan(b/a))), pow((pow(a,2.0f)+pow(b,2)),(n/2) )*(sin(n *atan(b/a))));
+  return newCmplx(pow((pow(a,2.0f)+pow(b,2.0f)),(n/2) )*(cos(n *atan(b/a))), 
+  pow((pow(a,2.0f)+pow(b,2)),(n/2) )*(sin(n *atan(b/a))));
 }
 
 

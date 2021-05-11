@@ -35,6 +35,8 @@ type Workspace struct {
 	programsCurrent bool
 
 	//Output Image Stuff
+	desiredFrames int32
+	currentFrame int
 	width, height int32
 	outputTex     *giu.Texture
 
@@ -81,6 +83,17 @@ func Init(onCloseFunc func()) Workspace {
 	}
 
 	return ws
+}
+
+func (ws *Workspace) makeAnim(){
+	for ws.currentFrame=0; ws.currentFrame<int(ws.desiredFrames); ws.currentFrame++{
+		fmt.Println("Making new#",	ws.currentFrame)
+		ws.Run()
+		fname:=fmt.Sprintf("Workspaces/OpenCL/Frames/Frame%04d",ws.currentFrame)
+		f,_:=os.Create(fname)
+		png.Encode(f,ws.images[0])
+		giu.Update()
+	}
 }
 
 func (ws *Workspace) PrepareBuffers() {

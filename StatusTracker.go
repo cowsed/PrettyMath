@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/cowsed/PrettyMath/Workspaces"
 	"fmt"
+
 	g "github.com/AllenDang/giu"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
 )
 
 var statusWindowShown = false
-
 
 var dummyReciever = workspace.ProgressUpdate{Status: "Dummy", Amount: 0.75}
 var statuses []workspace.ProgressUpdate = []workspace.ProgressUpdate{}
@@ -20,7 +20,7 @@ func AddProcess() chan workspace.ProgressUpdate {
 	//Buffer size of 5 just cuz
 	c := make(chan workspace.ProgressUpdate, 5)
 	communicators = append(communicators, c)
-	statuses = append(statuses, workspace.ProgressUpdate{"No Info Yet", "No description", 0.0})
+	statuses = append(statuses, workspace.ProgressUpdate{Status: "No Info Yet", Description: "No description", Amount: .0})
 	return c
 }
 
@@ -30,7 +30,7 @@ func queryComms() {
 		select {
 		case status, ok := <-ch:
 			if ok {
-				statuses[i] = workspace.ProgressUpdate{status.Status, status.Description, status.Amount}
+				statuses[i] = workspace.ProgressUpdate{Status: status.Status, Description: status.Description, Amount: status.Amount}
 				//There was a change so update
 				doUpdate = true
 				//IF value is end close channel and remove it
@@ -55,7 +55,7 @@ func queryComms() {
 
 //ToggleStatusWindow Toggles the visibility of the status window
 func ToggleStatusWindow() {
-	statusWindowShown=!statusWindowShown
+	statusWindowShown = !statusWindowShown
 
 }
 

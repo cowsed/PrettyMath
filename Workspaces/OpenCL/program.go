@@ -3,9 +3,10 @@ package opencl_renderer
 //Holds all the information needed for a program/kernel
 import (
 	"fmt"
+	"strings"
+
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
-	"strings"
 
 	"github.com/jgillich/go-opencl/cl"
 )
@@ -29,13 +30,13 @@ type CLProgram struct {
 
 func (p *CLProgram) Build(ws *Workspace) {
 	giu.TabItem(p.programName+" Program").Layout(
-		giu.Custom(func(){p.buildParameterInputs(ws)}),
+		giu.Custom(func() { p.buildParameterInputs(ws) }),
 		giu.Custom(func() {
-			p.editor.Render("OpenCl", imgui.Vec2{0, 0}, true)
+			p.editor.Render("OpenCl", imgui.Vec2{X: 0, Y: 0}, true)
 			if p.editor.IsTextChanged() {
 				p.programSource = p.editor.GetText()
 				p.current = false
-				ws.programsCurrent=false
+				ws.programsCurrent = false
 				//p.ws.checkPrograms()
 				fmt.Println("Update Parameters")
 				p.makeParameters(ws)
@@ -120,11 +121,11 @@ func (p *CLProgram) BuildProgram(ws *Workspace) {
 		ws.releaseOnFinish()
 		fmt.Println(err.Error())
 		panic(err)
-		return
+		//return
 	}
 
 	p.kernelCL = kernel
-	p.current= true
+	p.current = true
 
 }
 
@@ -156,7 +157,7 @@ func (p *CLProgram) buildParameterInputs(ws *Workspace) {
 }
 
 func (p *CLProgram) makeParameters(ws *Workspace) {
-	fmt.Printf("My name is %p\n",p)
+	fmt.Printf("My name is %p\n", p)
 
 	names, types, err := findNamesAndTypes(p.programName, p.programSource)
 	fmt.Println("names:", names)
@@ -186,7 +187,7 @@ func (p *CLProgram) makeParameters(ws *Workspace) {
 			if oldArgAvailable && oldArgs[i].getType() == actualType {
 				newArg = oldArgs[i]
 			} else {
-				newArg = &CLUint32Input{0, names[i], 0, 1, actualType}
+				newArg = &CLUint32Input{0, names[i], 0, 100, actualType}
 			}
 			newArg.setName(names[i])
 			p.programArgs = append(p.programArgs, newArg)
