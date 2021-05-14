@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/AllenDang/giu"
@@ -36,6 +37,7 @@ func Init(onCloseFunc func()) Workspace {
 	ws := Workspace{
 		amOpen:     true,
 		onClose:    onCloseFunc,
+		imageZoom:  .5,
 		fragSource: baseFragSource,
 		parameters: []Parameter{},
 	}
@@ -94,6 +96,8 @@ type Workspace struct {
 	fragSource string
 	imageZoom  float32
 
+	lastTime float64
+
 	//Shader Parameters
 	parameters []Parameter
 
@@ -110,6 +114,7 @@ type Workspace struct {
 
 //Draws the shader
 func (ws *Workspace) Draw() {
+	start := time.Now()
 	ws.SetUniforms()
 	//Switch to shader fbo
 	gl.BindFramebuffer(gl.FRAMEBUFFER, ws.framebuffer)
@@ -126,6 +131,8 @@ func (ws *Workspace) Draw() {
 
 	//Switch back to default framebuffer
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	elapsed := time.Since(start)
+	ws.lastTime = float64(elapsed.Microseconds())
 
 }
 
@@ -143,12 +150,12 @@ func (ws *Workspace) BuildProgram() {
 	gl.DeleteProgram(ws.program)
 
 	//Compile Vertex Shader
-	vertexShader, err := compileShader(baseVertSource+"\x00", gl.VERTEX_SHADER)
+	vertexShader, err := ws.compileShader(baseVertSource+"\x00", gl.VERTEX_SHADER)
 	if err != nil {
 		panic(err)
 	}
 	//Compile Fragment Shader
-	fragmentShader, err := compileShader(ws.fragSource+"\x00", gl.FRAGMENT_SHADER)
+	fragmentShader, err := ws.compileShader(ws.fragSource+"\x00", gl.FRAGMENT_SHADER)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -194,14 +201,17 @@ func (ws *Workspace) Build() {
 			giu.Button("Save").OnClick(ws.SaveBuf),
 			giu.SliderFloat("Image Size", &ws.imageZoom, 0, 1),
 		),
-		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 100,
+		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 500,
 			giu.Group().Layout(
 				giu.Custom(func() {
-					for i := range ws.parameters {
-						ws.parameters[i].Build()
-					}
-					if len(ws.parameters) == 0 {
-						giu.Label("You may have parameters that are not active")
+					if imgui.TreeNodeV("Paramaters", imgui.TreeNodeFlagsFramed) {
+						for i := range ws.parameters {
+							ws.parameters[i].Build()
+						}
+						if len(ws.parameters) == 0 {
+							giu.Label("You may have parameters that are not active")
+						}
+						imgui.TreePop()
 					}
 					ws.editor.Render("OpenCl", imgui.Vec2{X: 0, Y: 0}, true)
 					if ws.editor.IsTextChanged() {
@@ -210,7 +220,7 @@ func (ws *Workspace) Build() {
 				}),
 			),
 			giu.Group().Layout(
-				giu.Label("Other Pane"),
+				giu.Label(fmt.Sprintf("Draw Time: %.2f us ", ws.lastTime)),
 				//giu.Image(giu.ToTexture(imgui.TextureID(ws.outputTex))),
 				giu.Custom(func() {
 					imgui.Image(imgui.TextureID(ws.outputTex), imgui.Vec2{X: 1024 * ws.imageZoom, Y: 768 * ws.imageZoom})
@@ -240,7 +250,7 @@ func (ws *Workspace) SaveBuf() {
 }
 
 //Compiles shaders
-func compileShader(source string, shaderType uint32) (uint32, error) {
+func (ws *Workspace) compileShader(source string, shaderType uint32) (uint32, error) {
 	shader := gl.CreateShader(shaderType)
 
 	csources, free := gl.Strs(source)
@@ -257,8 +267,37 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
 
-		return 0, fmt.Errorf("failed to compile:\n %v\nLog:\n%v", source[:len(source)-1], log[:len(log)-1])
+		ws.CreateAndSetErrors(log[:len(log)-2])
+		return 0, fmt.Errorf("failed to compile:\nLog:\n%v", log[:len(log)-2])
+	}
+	ws.editor.SetErrorMarkers(imgui.NewErrorMarkers())
+	return shader, nil
+}
+
+func (ws *Workspace) CreateAndSetErrors(log string) {
+	eMarkers := imgui.NewErrorMarkers()
+	errors := strings.Split(strings.Trim(log, "\x00\n"), "\n")
+	for _, err := range errors {
+		//skip EOF
+		if err == "\x00" {
+			continue
+		}
+		var text string
+		var line, col int
+		//This is really hacky cuz im bad at scanf
+
+		err = strings.ReplaceAll(err, " ", "\\")
+		fmt.Println("LineSource", err)
+		n, e := fmt.Sscanf(err+"\n", "0:%d(%d):\\%s\n", &line, &col, &text)
+		fmt.Println(n, "found")
+		if e != nil {
+			fmt.Println("ERR", n, "err:", e)
+		}
+		text = strings.ReplaceAll(text, "\\", " ")
+		fmt.Printf("LineNum: %d, Col: %d, Result: %s\n", line, col, text)
+		eMarkers.Insert(line, text)
 	}
 
-	return shader, nil
+	ws.editor.SetErrorMarkers(eMarkers)
+
 }

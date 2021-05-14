@@ -7,6 +7,8 @@ import (
 	"github.com/go-gl/gl/v3.2-core/gl"
 )
 
+//ADD boolean and int
+
 func (ws *Workspace) FindUniforms() {
 	var i uint32
 	var count int32
@@ -19,14 +21,18 @@ func (ws *Workspace) FindUniforms() {
 	var length int32                         // name length
 
 	gl.GetProgramiv(ws.program, gl.ACTIVE_UNIFORMS, &count)
-	fmt.Printf("Active Uniforms: %d\n", count)
 	newUniforms := make([]Parameter, count)
 
 	for i = 0; i < uint32(count); i++ {
 		gl.GetActiveUniform(ws.program, i, bufSize, &length, &size, &uType, &uName[0])
-		fmt.Printf("Uniform #%d Type: %v Name: %s\n", i, uType, gl.GoStr(&uName[0]))
+
+		if len(ws.parameters) == len(newUniforms) && ws.parameters[i].GetName() == gl.GoStr(&uName[0]) {
+			newUniforms[i] = ws.parameters[i]
+			continue
+		}
 		switch uType {
 		case gl.FLOAT:
+
 			newUniforms[i] = &FloatParam{
 				Value: 0,
 				Name:  gl.GoStr(&uName[0]),
@@ -41,7 +47,13 @@ func (ws *Workspace) FindUniforms() {
 				min:   -1000,
 				max:   1000,
 				step:  .05}
+		case gl.INT:
+			newUniforms[i] = &Int32Param{
+				Name:  gl.GoStr(&uName[0]),
+				Value: 0,
+			}
 		}
+
 	}
 	ws.parameters = newUniforms
 }
@@ -49,6 +61,23 @@ func (ws *Workspace) FindUniforms() {
 type Parameter interface {
 	Build()
 	SetUniform(program uint32)
+	GetName() string
+}
+
+type Int32Param struct {
+	Value int32
+	Name  string
+}
+
+func (b *Int32Param) GetName() string {
+	return b.Name
+}
+func (b *Int32Param) Build() {
+	imgui.DragInt(b.Name, &b.Value)
+}
+func (b *Int32Param) SetUniform(program uint32) {
+	loc := gl.GetUniformLocation(program, gl.Str(b.Name+"\x00"))
+	gl.Uniform1i(loc, b.Value)
 }
 
 type FloatParam struct {
@@ -57,6 +86,9 @@ type FloatParam struct {
 	min, max, step float32
 }
 
+func (fp *FloatParam) GetName() string {
+	return fp.Name
+}
 func (fp *FloatParam) Build() {
 	imgui.DragFloatV(fp.Name, &fp.Value, fp.step, fp.min, fp.max, "%.3f", 1)
 
@@ -85,6 +117,9 @@ type Vec3Param struct {
 	min, max, step float32
 }
 
+func (v3p *Vec3Param) GetName() string {
+	return v3p.Name
+}
 func (v3p *Vec3Param) Build() {
 	DragFloat3(v3p.Name, &v3p.Value, v3p.step, v3p.min, v3p.max, "%.3f")
 

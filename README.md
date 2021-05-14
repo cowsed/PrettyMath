@@ -2,6 +2,12 @@
 ![Most Recent](https://github.com/cowsed/PrettyMath/blob/main/Gallery/2.png?raw=true)
 ![Made a while ago](https://github.com/cowsed/PrettyMath/blob/main/image.png?raw=true)
 
+
+##Opengl workspace
+single pass shader editor
+supports setting int, float, and vec3 uniforms
+renders to framebuffer and texture to be used in gui as a texture
+
 ## Opencl workspace
 Opencl pipeline 
 feature list coming soon
