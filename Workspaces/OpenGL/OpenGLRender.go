@@ -73,7 +73,7 @@ func Init(onCloseFunc func()) Workspace {
 	gl.GenTextures(1, &ws.outputTex)
 	gl.BindTexture(gl.TEXTURE_2D, ws.outputTex)
 
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1024, 768, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1920, 1080, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 
@@ -118,7 +118,7 @@ func (ws *Workspace) Draw() {
 	ws.SetUniforms()
 	//Switch to shader fbo
 	gl.BindFramebuffer(gl.FRAMEBUFFER, ws.framebuffer)
-	gl.Viewport(0, 0, 1024, 768)
+	gl.Viewport(0, 0, 1920, 1080)
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.ClearColor(1, 0, 1, 1)
@@ -139,7 +139,11 @@ func (ws *Workspace) Draw() {
 //Sets the uniforms of the current shader program
 func (ws *Workspace) SetUniforms() {
 	for i := range ws.parameters {
-		ws.parameters[i].SetUniform(ws.program)
+		if ws.parameters[i] != nil {
+			ws.parameters[i].SetUniform(ws.program)
+		} else {
+			fmt.Println("Unsuported Uniform type for uniform", i)
+		}
 	}
 }
 
