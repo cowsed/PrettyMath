@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu/imgui"
-	ogl "github.com/cowsed/PrettyMath/Workspaces/OpenGL"
+	Plotter "github.com/cowsed/PrettyMath/Workspaces/2DPlotter"
 
 	g "github.com/AllenDang/giu"
 )
@@ -51,7 +51,7 @@ func main() {
 	//Create Window
 	wnd = g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
 
-	var start = (ogl.Init(onClose))
+	var start = (Plotter.Init(onClose))
 	CurrentWorkspace = &start
 
 	//Run it

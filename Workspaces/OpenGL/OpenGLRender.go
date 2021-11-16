@@ -199,6 +199,7 @@ func (ws *Workspace) Build() {
 	}
 	//Redraw Shader (Should realistically be controlled by a ticker or something)
 	ws.Draw()
+
 	giu.TabItem("OpenGL Editor").Layout(
 		giu.Line(
 			giu.Button("Build").OnClick(ws.BuildProgram),
@@ -237,7 +238,7 @@ func (ws *Workspace) Build() {
 //SaveBuf somewhat of a debug function, saves the ID Framebuffer texture to a file
 func (ws *Workspace) SaveBuf() {
 	log.Println("Saving to a.png")
-	outImage := image.NewRGBA(image.Rect(0, 0, 1024, 768))
+	outImage := image.NewRGBA(image.Rect(0, 0, 1920, 1080))
 	fmt.Println(outImage.Pix[0:8])
 
 	gl.ActiveTexture(gl.TEXTURE0)

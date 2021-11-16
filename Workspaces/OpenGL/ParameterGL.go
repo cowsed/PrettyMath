@@ -81,6 +81,57 @@ type Parameter interface {
 	GetName() string
 }
 
+//Cube map uniforms
+type CubeMapParam struct {
+	path      string
+	img       *image.RGBA
+	texHandle uint32
+	name      string
+	status    string
+}
+
+func (p *CubeMapParam) GetName() string {
+	return p.name
+}
+
+func (p *CubeMapParam) SetUniform(program uint32) {
+	loc := gl.GetUniformLocation(program, gl.Str(p.name+"\x00"))
+	gl.BindTexture(gl.SAMPLER_2D, p.texHandle)
+	gl.ActiveTexture(p.texHandle)
+	gl.Uniform1ui(loc, p.texHandle)
+}
+func (p *CubeMapParam) Build() {
+	imgui.InputText("File Path", &p.path)
+	imgui.SameLine()
+
+	if imgui.BeginPopupContextItemV(p.name+" Sampler2d", 1) {
+		imgui.BeginGroup()
+		id := "var: " + p.name + " : Sampler 2D"
+		imgui.Text(id)
+		imgui.Text("Further information and control")
+		imgui.Text(fmt.Sprintf("OpenGL ID %d", p.texHandle))
+		if p.img != nil {
+			imgui.Text(fmt.Sprintf("%dx%d", p.img.Bounds().Dx(), p.img.Bounds().Dy()))
+			imgui.Image(imgui.TextureID(p.texHandle), imgui.Vec2{X: 400, Y: 400 * (float32(p.img.Bounds().Dy()) / float32(p.img.Bounds().Dx()))})
+		} else {
+			imgui.Text("No GL Texture yet")
+		}
+		imgui.EndGroup()
+		imgui.EndPopup()
+	}
+
+	if imgui.Button("Reload") {
+		p.Reload()
+	}
+
+}
+func (p *CubeMapParam) Reload() {
+	p.img = image.NewRGBA(image.Rect(0, 0, 100, 200))
+	p.status = ""
+}
+
+//Sampler2d or general image uniform setter
+//TODO make this not do the wrong thing
 type Sampler2DParam struct {
 	path      string
 	img       *image.RGBA
@@ -91,6 +142,8 @@ type Sampler2DParam struct {
 
 func (p *Sampler2DParam) SetUniform(program uint32) {
 	loc := gl.GetUniformLocation(program, gl.Str(p.name+"\x00"))
+	gl.BindTexture(gl.SAMPLER_2D, p.texHandle)
+	gl.ActiveTexture(p.texHandle)
 	gl.Uniform1ui(loc, p.texHandle)
 }
 
