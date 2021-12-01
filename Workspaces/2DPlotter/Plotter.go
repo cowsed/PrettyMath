@@ -74,7 +74,7 @@ func (ws *Workspace) makeEquationPlots(i int) giu.PlotWidget {
 	if !ws.equationsMade[i] {
 		err := ws.CompileExpression(i)
 		if err != nil {
-			fmt.Println("Compiling Error")
+			fmt.Println("Compiling Error", err.Error())
 			return giu.PlotLine("Errored Plot", []float64{})
 		}
 		ws.UpdateGraph(i)

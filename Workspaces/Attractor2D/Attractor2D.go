@@ -10,9 +10,9 @@ import (
 	g "github.com/AllenDang/giu"
 	"github.com/gen2brain/beeep"
 
-	"github.com/cowsed/PrettyMath/Workspaces" //Workspaces
-	ep "github.com/cowsed/PrettyMath/ExpressionParser"
-	"github.com/cowsed/PrettyMath/Tools"
+	parser "github.com/cowsed/Parser"
+	tools "github.com/cowsed/PrettyMath/Tools"
+	workspace "github.com/cowsed/PrettyMath/Workspaces" //Workspaces
 )
 
 //Workspace is the workspace for generating 2-dimensional Attracors
@@ -57,8 +57,8 @@ type Workspace struct {
 	//Expression Stuff
 	XExpStr string
 	YExpStr string
-	XExp    ep.ExpressionElement
-	YExp    ep.ExpressionElement
+	XExp    parser.Expression
+	YExp    parser.Expression
 	XExpRep string
 	YExpRep string
 
@@ -72,7 +72,6 @@ type Workspace struct {
 	//Output Info
 	imageWidth  int32
 	imageHeight int32
-	image       image.RGBA
 	imageTex    *g.Texture
 
 	displayScale float32
@@ -129,15 +128,20 @@ func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdat
 
 //Takes all the editors and their values and updates the values to be sent to the rendering function
 func (ws *Workspace) updateParams() {
-	_, err := strconv.ParseFloat("a", 64)
-	ws.paramA, err = strconv.ParseFloat(ws.aString, 64)
-	ws.paramB, err = strconv.ParseFloat(ws.bString, 64)
-	ws.paramC, err = strconv.ParseFloat(ws.cString, 64)
-	ws.paramD, err = strconv.ParseFloat(ws.dString, 64)
-	fmt.Println("Param ERR:", err)
-
-	ws.x0, err = strconv.ParseFloat(ws.x0Str, 64)
-	ws.y0, err = strconv.ParseFloat(ws.y0Str, 64)
+	var err1, err2, err3, err4 error
+	ws.paramA, err1 = strconv.ParseFloat(ws.aString, 64)
+	ws.paramB, err2 = strconv.ParseFloat(ws.bString, 64)
+	ws.paramC, err3 = strconv.ParseFloat(ws.cString, 64)
+	ws.paramD, err4 = strconv.ParseFloat(ws.dString, 64)
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		fmt.Println("Param ERR:", err1, err2, err3, err4)
+	}
+	var err5, err6 error
+	ws.x0, err5 = strconv.ParseFloat(ws.x0Str, 64)
+	ws.y0, err6 = strconv.ParseFloat(ws.y0Str, 64)
+	if err1 != nil || err2 != nil {
+		fmt.Println("xi or yi error", err5, err6)
+	}
 	//Reset Vars
 	ws.Variables = nil
 	ws.Variables = make(map[string]float64)
@@ -153,13 +157,22 @@ func (ws *Workspace) updateParams() {
 	ws.offy = int(float32(ws.imageHeight) * (ws.offyPer))
 
 	//Compile Expressions
-	ws.XExp = ep.ParseExpression(ws.XExpStr, ws.Variables)
-	ws.YExp = ep.ParseExpression(ws.YExpStr, ws.Variables)
+	var err error
+	ws.XExp, err = parser.ParseExpression(ws.XExpStr)
+	if err != nil {
+		fmt.Println("PANICX", err.Error())
+		return
+	}
+	ws.YExp, err = parser.ParseExpression(ws.YExpStr)
+	if err != nil {
+		fmt.Println("PANICY", err.Error())
+		return
+	}
 
 	//Representations of The Expressions
 
-	ws.XExpRep = ws.XExp.BecomeString()
-	ws.YExpRep = ws.YExp.BecomeString()
+	ws.XExpRep = ws.XExp.String()
+	ws.YExpRep = ws.YExp.String()
 
 }
 
@@ -238,7 +251,7 @@ func (ws *Workspace) loadImage() {
 	}()
 }
 
-//overwriteWithAsyncImage replaces the current image/texture with the image that was just rendered by 
+//overwriteWithAsyncImage replaces the current image/texture with the image that was just rendered by
 func (ws *Workspace) overwriteWithAsyncImage() {
 	f, _ := os.Create("out.png")
 	png.Encode(f, ws.asynchronouslyRenderedImage)
@@ -247,7 +260,8 @@ func (ws *Workspace) overwriteWithAsyncImage() {
 	ws.decisionPopupShown = false
 
 }
-//saveAsyncImage saves the asynchronously generated image 
+
+//saveAsyncImage saves the asynchronously generated image
 func (ws *Workspace) saveAsyncImage() {
 	f, _ := os.Create("out2.png")
 	png.Encode(f, ws.asynchronouslyRenderedImage)

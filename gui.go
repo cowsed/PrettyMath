@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log"
+	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/AllenDang/giu/imgui"
@@ -40,6 +43,16 @@ func loop() {
 }
 
 func main() {
+	f, err := os.Create("cpuprofile.prof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f.Close() // error handling omitted for example
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+
 	//Query the comms etc and forever
 	go func() {
 		for {

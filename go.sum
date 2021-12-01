@@ -1,7 +1,7 @@
 github.com/AllenDang/giu v0.5.3 h1:XFQdiiGWGulYen8Ebvri3Oe3DMFl5gY/7bKNtJxhOjM=
 github.com/AllenDang/giu v0.5.3/go.mod h1:s8+ELvV41d5N5oB7N51qmAUukz4dDNT1dVHDp4m/w2g=
-github.com/cowsed/Parser v0.0.0-20211116030744-640b7da21af1 h1:ikOJeG8pYaQdsyV1lIDB1l1qDIhgs3Y2flYLpfEHLcU=
-github.com/cowsed/Parser v0.0.0-20211116030744-640b7da21af1/go.mod h1:zPS2XQoPvr6pJUZt4x2po+E36TZWxB2u8lFHXnojOvQ=
+github.com/cowsed/Parser v0.0.0-20211117034524-ee8ec8476e3e h1:sq8PGJocrX5i2XTcuNEtPCy28VNEKH14EITujYwjHXY=
+github.com/cowsed/Parser v0.0.0-20211117034524-ee8ec8476e3e/go.mod h1:zPS2XQoPvr6pJUZt4x2po+E36TZWxB2u8lFHXnojOvQ=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 h1:baVdMKlASEHrj19iqjARrPbaRisD7EuZEVJj6ZMLl1Q=

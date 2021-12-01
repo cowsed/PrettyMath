@@ -6,15 +6,15 @@ import (
 	"image/color"
 	"math"
 
-	ep "github.com/cowsed/PrettyMath/ExpressionParser"
-	"github.com/cowsed/PrettyMath/Tools"
+	parser "github.com/cowsed/Parser"
+	tools "github.com/cowsed/PrettyMath/Tools"
 )
 
 //asyncRenderer holds all the parameters needed to render asynchornously without carrying the extra bagage of all the gui stuff
 type renderer struct {
 	vars        map[string]float64
-	xExpression ep.ExpressionElement
-	yExpression ep.ExpressionElement
+	xExpression parser.Expression
+	yExpression parser.Expression
 
 	nthRoot       float64
 	gradient      tools.Gradient
@@ -31,10 +31,18 @@ func (r *renderer) render() *image.RGBA {
 	var drawnPoints = 0
 	var drawnPointsIndividual = 0
 
+	xFunc := parser.CompileExpression(r.xExpression)
+	yFunc := parser.CompileExpression(r.yExpression)
+
 	//Drawing
 	for i := 0; i < int(r.numPoints); i++ {
-		newx := r.xExpression.BecomeNumber(r.vars)
-		newy := r.yExpression.BecomeNumber(r.vars)
+		newx := xFunc(r.vars)
+		newy := yFunc(r.vars)
+		if i == 0 {
+			fmt.Println("newxnewyy", newx, newy)
+			fmt.Println(r.vars)
+
+		}
 
 		r.vars["x"] = newx
 		r.vars["y"] = newy
@@ -56,14 +64,14 @@ func (r *renderer) render() *image.RGBA {
 		}
 	}
 	//Render Data
-	print("Max Points: ")
-	println(maxPointsPerCell)
-	print("Points Drawn: ")
-	println(drawnPoints)
-	print("Individual Points: ")
-	fmt.Println(drawnPointsIndividual)
-	print("Possible Points: ")
-	fmt.Println(r.width * r.height)
+	//print("Max Points: ")
+	//println(maxPointsPerCell)
+	//print("Points Drawn: ")
+	//println(drawnPoints)
+	//print("Individual Points: ")
+	//fmt.Println(drawnPointsIndividual)
+	//print("Possible Points: ")
+	//fmt.Println(r.width * r.height)
 
 	//Making into an image
 	upLeft := image.Point{0, 0}

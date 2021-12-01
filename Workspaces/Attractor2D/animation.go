@@ -1,13 +1,15 @@
 package attractor2d
 
 import (
-	"github.com/cowsed/PrettyMath/Workspaces"
 	"fmt"
 	"image/png"
 	"os"
 
-	"github.com/AllenDang/giu"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
+
 	"math/rand"
+
+	"github.com/AllenDang/giu"
 )
 
 var availableAnimationTitles []string = []string{"Random Walk", "Parameter Functions", "BuildUp"}
@@ -92,7 +94,11 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 			println("Making animation - loop - goroutine")
 
 			amt := float64(f) / float64(frameAmt)
-			communicator <- workspace.ProgressUpdate{"Working", processDescription, amt}
+			communicator <- workspace.ProgressUpdate{
+				Status:      "Working",
+				Description: processDescription,
+				Amount:      amt,
+			}
 
 			//Set Parameters
 			fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
@@ -123,7 +129,7 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 				newy = r.vars["y"] + ((rand.Float64()*2)-1)*float64(rw.stepSize)
 			}
 
-			fmt.Println("a: %.3f, b: %.3f, c: %.3f, d: %.3f", newa, newb, newc, newd)
+			fmt.Printf("a: %.3f, b: %.3f, c: %.3f, d: %.3f\n", newa, newb, newc, newd)
 			r.vars["a"] = newa
 			r.vars["b"] = newb
 			r.vars["c"] = newc
@@ -131,9 +137,9 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 			r.vars["x"] = newx
 			r.vars["y"] = newy
 		}
-		communicator <- workspace.ProgressUpdate{"End", processDescription, 1.0}
+		communicator <- workspace.ProgressUpdate{Status: "End", Description: processDescription, Amount: .0}
 		//Notify user of finishing
-		fmt.Println("\n\n\n ---- Finished animation ----\n\n\n")
+		fmt.Println("\n\n\n ---- Finished animation ----")
 		close(communicator)
 	}()
 }
@@ -142,6 +148,7 @@ func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, pro
 type parameterAlter struct {
 	//[]Expression Elements
 }
+
 //For now, doesnt do anything
 func (pa *parameterAlter) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
 	for f := 0; f < frameAmt; f++ {
@@ -170,7 +177,7 @@ func (bu *buildUp) makeFrames(frameAmt int, outPath string, r renderer, processC
 		r.numPoints = int(tempNumPoints)
 		fpath := fmt.Sprintf("%sout%06d.png", outPath, f)
 		img := r.render()
-		
+
 		//Save image to file
 		f, _ := os.Create(fpath)
 		png.Encode(f, img)
