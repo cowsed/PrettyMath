@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu/imgui"
-	Plotter "github.com/cowsed/PrettyMath/Workspaces/2DPlotter"
+	modelviewer "github.com/cowsed/PrettyMath/Workspaces/ModelViewer"
 
 	g "github.com/AllenDang/giu"
 )
@@ -42,6 +42,16 @@ func loop() {
 
 }
 
+func refresh() {
+	ticker := time.NewTicker(time.Millisecond * 32)
+
+	for {
+		g.Update()
+
+		<-ticker.C
+	}
+}
+
 func main() {
 	f, err := os.Create("cpuprofile.prof")
 	if err != nil {
@@ -60,11 +70,13 @@ func main() {
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}()
+	//Keep the window refreshing
+	go refresh()
 
 	//Create Window
 	wnd = g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
 
-	var start = (Plotter.Init(onClose))
+	var start = (modelviewer.Init(onClose))
 	CurrentWorkspace = &start
 
 	//Run it

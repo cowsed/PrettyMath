@@ -1,14 +1,15 @@
 package main
 
 import (
+	"runtime"
+
 	plot "github.com/cowsed/PrettyMath/Workspaces/2DPlotter"
 	a2d "github.com/cowsed/PrettyMath/Workspaces/Attractor2D"
 	ocl "github.com/cowsed/PrettyMath/Workspaces/OpenCL"
 	ogl "github.com/cowsed/PrettyMath/Workspaces/OpenGL"
 
 	g "github.com/AllenDang/giu"
-
-	"runtime"
+	modelviewer "github.com/cowsed/PrettyMath/Workspaces/ModelViewer"
 )
 
 //NewWorkspace is an empty struct (to fulfill g.Widget)for a page that allows the creation of workspaces
@@ -24,7 +25,14 @@ func (NWS *NewWorkspace) Build() {
 		g.Button("New Plot").OnClick(NWS.SetPlot),
 		g.Button("New OpenCL").OnClick(NWS.SetOpenCL),
 		g.Button("New OpenGL").OnClick(NWS.SetOpenGL),
+		g.Button("New Model Viewer").OnClick(NWS.SetModelViewer),
 	).Build()
+}
+
+//SetModelViewer opens the attractor 2d workspace
+func (c *NewWorkspace) SetModelViewer() {
+	a := modelviewer.Init(onClose)
+	CurrentWorkspace = &a
 }
 
 //SetA2D opens the attractor 2d workspace
