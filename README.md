@@ -1,16 +1,22 @@
 # Fancy Math things
-![Most Recent](https://github.com/cowsed/PrettyMath/blob/main/Gallery/2.png?raw=true)
-![Made a while ago](https://github.com/cowsed/PrettyMath/blob/main/image.png?raw=true)
 
+## Model Viewer
+Can load arbitrary obj files.
+Can generate a solid of revolution and calculate the volume. (Thanks BC Calc)
+Can generate a solid where the side length is determined by a function and cross sections perpendicular to the x-axis
 
-##Opengl workspace
-single pass shader editor
+![Modelviewer Example Normals](https://github.com/cowsed/PrettyMath/blob/main/Gallery/ModelsNormal.png?raw=true)
+![Modelviewer Example Shaded](https://github.com/cowsed/PrettyMath/blob/main/Gallery/ModelsShaded.png?raw=true)
+
+## OpenGL Shader Editor
+Uniform editors
+single pass shader editor much like Shadertoy
 supports setting int, float, and vec3 uniforms
 renders to framebuffer and texture to be used in gui as a texture
+![OpenGL Example](https://github.com/cowsed/PrettyMath/blob/main/Gallery/OpenGLExample1.png?raw=true)
 
-## Opencl workspace
-Opencl pipeline 
-feature list coming soon
+## OpenCL workspace
+Opencl pipeline  -  currently broken
 
 ## 2D attractors 
 in the form of
@@ -22,17 +28,15 @@ plot(xnew,ynew)
 x=xnew
 y=ynew
 ```
+![Example Attractor 1](https://github.com/cowsed/PrettyMath/blob/main/Gallery/2.png?raw=true)
+![Example Attractor 2](https://github.com/cowsed/PrettyMath/blob/main/image.png?raw=true)
 
 Features:
 - fine control over output parameters
-- moderately functioning parser for math expressions (mostly a mess right now)
-- Gradient Support! (I really like how this turned out)
+- [Expression parser](https://github.com/cowsed/Parser) to take new formulas at run time. Accepts ln, sin, cos, and more coming soon 
+- Gradient Support and editor
 
-Sources:
-- AllenDang's giu and imgui libraries
-- https://softologyblog.wordpress.com/2017/03/04/2d-strange-attractors/
+
 
 Todo:
-- Fix Expression Parser to correctly parse single variable functions(also optimize it so it makes bytecode instead of traversing a tree)(also maybe make a jit inside to generate a function and return a pointer to it then just call the function  when necessary(Thats a big stretch though, Id have to learn a lot of things))
-- Implement ideas in Workspaces/ideas.txt
-- Fix Plotting workspace so that it only makes cal
+Remake Plotting workspace so its actually useful
