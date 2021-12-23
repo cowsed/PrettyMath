@@ -2,13 +2,13 @@ package tools
 
 import (
 	"fmt"
-	"github.com/AllenDang/giu"
-	"github.com/AllenDang/giu/imgui"
 	"image"
 	"image/color"
 	"sort"
-)
 
+	"github.com/AllenDang/giu"
+	"github.com/AllenDang/giu/imgui"
+)
 
 //A Gradient that holds color ticks at specific places (The idea and implementation was pretty much stolen straight from the Godot game engine
 type Gradient struct {
@@ -145,7 +145,7 @@ func (g *Gradient) makePreview() *image.RGBA {
 		r, g, b, a := col[0], col[1], col[2], col[3]
 		pixels = append(pixels, []uint8{uint8(r * 255), uint8(g * 255), uint8(b * 255), uint8(a * 255)}...)
 	}
-	img := image.RGBA{pixels, 1, image.Rectangle{image.Point{0, 0}, image.Point{len(pixels) / 4, 1}}}
+	img := image.RGBA{Pix: pixels, Stride: 1, Rect: image.Rectangle{image.Point{0, 0}, image.Point{len(pixels) / 4, 1}}}
 	return &img
 }
 
@@ -173,7 +173,7 @@ func GradientEditor(id string, gradient *Gradient, currentColor *int, flags int)
 }
 
 func arrToVec4(arr [4]float32) imgui.Vec4 {
-	return imgui.Vec4{arr[0], arr[1], arr[2], arr[3]}
+	return imgui.Vec4{X: arr[0], Y: arr[1], Z: arr[2], W: arr[3]}
 }
 
 //Build provides the build function for immediate mode
@@ -184,7 +184,7 @@ func (gr GradientEditorWidget) Build() {
 	p := giu.GetCursorScreenPos()
 
 	//imgui.ImageButton(gr.previewTexID, imgui.Vec2{availableWidth, 10})
-	imgui.ImageButtonV(gr.previewTexID, imgui.Vec2{availableWidth, 10}, imgui.Vec2{0, 0}, imgui.Vec2{1, 1}, 0, imgui.Vec4{0, 0, 0, 0}, imgui.Vec4{1, 1, 1, 1})
+	imgui.ImageButtonV(gr.previewTexID, imgui.Vec2{X: availableWidth, Y: 10}, imgui.Vec2{X: 0, Y: 0}, imgui.Vec2{X: 1, Y: 1}, 0, imgui.Vec4{X: 0, Y: 0, Z: 0, W: 0}, imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
 	if imgui.IsItemClicked(0) {
 		fmt.Println("add color")
 		//Add color at mouse position
@@ -201,7 +201,7 @@ func (gr GradientEditorWidget) Build() {
 	//imgui.Vec4{1,0,0,1}//
 	tickBorder := 2
 	topOffset := 10
-	tickSize := imgui.Vec2{float32(tickBorder*2 + topOffset), float32(tickHeight + topOffset + tickBorder*2)}
+	tickSize := imgui.Vec2{X: float32(tickBorder*2 + topOffset), Y: float32(tickHeight + topOffset + tickBorder*2)}
 	for i, t := range gr.grad.ticks {
 		col := arrToVec4(t.color) //giu.ToVec4Color(t.color)
 		pos := float32(t.pos) * availableWidth
@@ -222,7 +222,7 @@ func (gr GradientEditorWidget) Build() {
 		drawList.AddRectFilled(giu.ToVec2(pmin2), giu.ToVec2(pmax2), col, 0, 5)
 
 		imgui.SetCursorScreenPos(giu.ToVec2(p.Add(image.Point{int(availableWidth*float32(t.pos)) - tickBorder, 0})))
-		if imgui.InvisibleButton("ButtonX"+string(i), tickSize) {
+		if imgui.InvisibleButton("ButtonX"+fmt.Sprint(i), tickSize) {
 			fmt.Println("clicked: ", i)
 			*gr.active = i
 			fmt.Println("Active: ", gr.active)

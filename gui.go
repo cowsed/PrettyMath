@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu/imgui"
-	modelviewer "github.com/cowsed/PrettyMath/Workspaces/ModelViewer"
 
 	g "github.com/AllenDang/giu"
 )
 
 //CurrentWorkspace is the workspace that will be rendered (initial value is the creation page)
-var CurrentWorkspace g.Widget = &NewWorkspace{}
+//var CurrentWorkspace g.Widget = &NewWorkspace{}
+var CurrentWorkspaces []g.Widget = []g.Widget{&NewWorkspace{}}
 
 var wnd *g.MasterWindow
 
@@ -32,8 +32,8 @@ func loop() {
 		g.Line(
 			statusBar,
 			g.TabBar("TabBar").Layout(
-				CurrentWorkspace,
-			),
+				CurrentWorkspaces...,
+			).Flags(g.TabBarFlagsAutoSelectNewTabs),
 		),
 	)
 	if statusWindowShown {
@@ -75,9 +75,6 @@ func main() {
 
 	//Create Window
 	wnd = g.NewMasterWindow("PrettyMath", 1200, 800, 0, nil)
-
-	var start = (modelviewer.Init(onClose))
-	CurrentWorkspace = &start
 
 	//Run it
 	wnd.Run(loop)

@@ -1,17 +1,17 @@
 package tools
 
-import(
+import (
 	"fmt"
+
 	"github.com/AllenDang/giu/imgui"
 )
-
 
 func DragFloatN(label string, vec []float32, speed, min, max float32, format string) bool {
 	value_changed := false
 	//imgui.BeginGroup()
 	//imgui.PushID(label)
 	size := imgui.CalcItemWidth() / float32(len(vec)+1)
-	for i, _ := range vec {
+	for i := range vec {
 		imgui.PushItemWidth(size)
 		id := fmt.Sprintf("%s-%d\n", label, i)
 		imgui.PushID(id)

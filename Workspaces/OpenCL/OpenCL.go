@@ -12,15 +12,23 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+
 	//"log"
 	"os"
 	//"strconv"
 	//"strings"
 
 	"github.com/AllenDang/giu"
+	tools "github.com/cowsed/PrettyMath/Tools"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
+
 	//"github.com/AllenDang/giu/imgui"
 	"github.com/jgillich/go-opencl/cl"
 )
+
+func init() {
+	workspace.RegisterWorkspace(Init, "OpenCL")
+}
 
 var baseProgram = loadFile("Workspaces/OpenCL/mandelbrot.cl")
 
@@ -36,7 +44,7 @@ type Workspace struct {
 
 	//Output Image Stuff
 	desiredFrames int32
-	currentFrame int
+	currentFrame  int
 	width, height int32
 	outputTex     *giu.Texture
 
@@ -55,7 +63,7 @@ type Workspace struct {
 }
 
 //Init initializes a new OpenCL workspace
-func Init(onCloseFunc func()) Workspace {
+func Init(onCloseFunc func(), AddProcessComm func() chan workspace.ProgressUpdate) tools.Workspace {
 	prog := CLProgram{
 		programSource: baseProgram,
 		programName:   "fractal",
@@ -82,16 +90,16 @@ func Init(onCloseFunc func()) Workspace {
 		ws.programs[i].makeParameters(&ws)
 	}
 
-	return ws
+	return &ws
 }
 
-func (ws *Workspace) makeAnim(){
-	for ws.currentFrame=0; ws.currentFrame<int(ws.desiredFrames); ws.currentFrame++{
-		fmt.Println("Making new#",	ws.currentFrame)
+func (ws *Workspace) makeAnim() {
+	for ws.currentFrame = 0; ws.currentFrame < int(ws.desiredFrames); ws.currentFrame++ {
+		fmt.Println("Making new#", ws.currentFrame)
 		ws.Run()
-		fname:=fmt.Sprintf("Workspaces/OpenCL/Frames/Frame%04d",ws.currentFrame)
-		f,_:=os.Create(fname)
-		png.Encode(f,ws.images[0])
+		fname := fmt.Sprintf("Workspaces/OpenCL/Frames/Frame%04d", ws.currentFrame)
+		f, _ := os.Create(fname)
+		png.Encode(f, ws.images[0])
 		giu.Update()
 	}
 }
@@ -137,7 +145,7 @@ func (ws *Workspace) Run() {
 	//ws.programsCurrent = true
 
 	for i := range ws.programs {
-		fmt.Println("Pre Program is ",&(ws.programs[i]))
+		fmt.Println("Pre Program is ", &(ws.programs[i]))
 		if ws.programs[i].kernelCL == nil {
 			kernelsReady = false
 		}

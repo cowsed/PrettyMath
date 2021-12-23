@@ -26,10 +26,10 @@ var points []float32 = []float32{
 	1, -1, 0,
 }
 
-//go:embed example.frag
+//go:embed Shaders/example.frag
 var baseFragSource string
 
-//go:embed example.vert
+//go:embed Shaders/example.vert
 var baseVertSource string
 
 func Init(onCloseFunc func()) Workspace {
@@ -80,9 +80,9 @@ func Init(onCloseFunc func()) Workspace {
 	gl.BindFramebuffer(gl.FRAMEBUFFER, ws.framebuffer)
 	gl.FramebufferTexture(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, ws.outputTex, 0)
 
-	// Set the list of draw buffers.
-	DrawBuffers := []uint32{gl.COLOR_ATTACHMENT0}
-	gl.DrawBuffers(1, &DrawBuffers[0]) // "1" is the size of DrawBuffers
+	//// Set the list of draw buffers.
+	//DrawBuffers := []uint32{gl.COLOR_ATTACHMENT0}
+	//gl.DrawBuffers(1, &DrawBuffers[0]) // "1" is the size of DrawBuffers
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
 	ws.BuildProgram()
@@ -127,6 +127,7 @@ func (ws *Workspace) Draw() {
 
 	gl.UseProgram(ws.program)
 	gl.BindVertexArray(ws.vao)
+
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(points)/3))
 
 	//Switch back to default framebuffer
@@ -195,6 +196,11 @@ func (ws *Workspace) BuildProgram() {
 func (ws *Workspace) Build() {
 	if !ws.amOpen {
 		//Release Everything
+		gl.DeleteTextures(1, &ws.outputTex)
+		gl.DeleteFramebuffers(1, &ws.framebuffer)
+		gl.DeleteProgram(ws.program)
+		gl.DeleteVertexArrays(1, &ws.vao)
+		gl.DeleteBuffers(1, &ws.vbo)
 		ws.onClose()
 	}
 	//Redraw Shader (Should realistically be controlled by a ticker or something)
@@ -206,8 +212,10 @@ func (ws *Workspace) Build() {
 			giu.Button("Save").OnClick(ws.SaveBuf),
 			giu.SliderFloat("Image Size", &ws.imageZoom, 0, 1),
 		),
-		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 500,
+		giu.SplitLayout("MainGLSplit", giu.DirectionHorizontal, true, 500,
 			giu.Group().Layout(
+				giu.Label(fmt.Sprintf("GL Framebuf: %d. OutputTex: %d", ws.framebuffer, ws.outputTex)),
+
 				giu.Custom(func() {
 					if imgui.TreeNodeV("Paramaters", imgui.TreeNodeFlagsFramed) {
 						for i := range ws.parameters {
@@ -218,7 +226,7 @@ func (ws *Workspace) Build() {
 						}
 						imgui.TreePop()
 					}
-					ws.editor.Render("OpenCl", imgui.Vec2{X: 0, Y: 0}, true)
+					ws.editor.Render("OpenGl", imgui.Vec2{X: 0, Y: 0}, true)
 					if ws.editor.IsTextChanged() {
 						ws.fragSource = ws.editor.GetText()
 					}
@@ -226,9 +234,14 @@ func (ws *Workspace) Build() {
 			),
 			giu.Group().Layout(
 				giu.Label(fmt.Sprintf("Draw Time: %.2f us ", ws.lastTime)),
-				//giu.Image(giu.ToTexture(imgui.TextureID(ws.outputTex))),
 				giu.Custom(func() {
-					imgui.Image(imgui.TextureID(ws.outputTex), imgui.Vec2{X: 1024 * ws.imageZoom, Y: 768 * ws.imageZoom})
+					imgui.ImageV(
+						imgui.TextureID(ws.outputTex),
+						imgui.Vec2{X: 1024 * ws.imageZoom, Y: 768 * ws.imageZoom},
+						imgui.Vec2{X: 0, Y: 1},
+						imgui.Vec2{X: 1, Y: 0},
+						imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1},
+						imgui.Vec4{X: 0, Y: 0, Z: 0, W: 0})
 				}),
 			),
 		),

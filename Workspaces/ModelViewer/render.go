@@ -44,8 +44,10 @@ func (ws *Workspace) Draw() {
 	gl.UseProgram(ws.program)
 
 	lightpospos := gl.GetUniformLocation(ws.program, gl.Str("lightpos"+"\x00"))
-
 	gl.Uniform3f(lightpospos, ws.lightpos.Value[0], ws.lightpos.Value[1], ws.lightpos.Value[2])
+
+	viewpospos := gl.GetUniformLocation(ws.program, gl.Str("viewpos"+"\x00"))
+	gl.Uniform3f(viewpospos, ws.cameraPos.Value[0], ws.cameraPos.Value[1], ws.cameraPos.Value[2])
 
 	ambientPos := gl.GetUniformLocation(ws.program, gl.Str("ambient"+"\x00"))
 	gl.Uniform1f(ambientPos, ws.ambientLight)

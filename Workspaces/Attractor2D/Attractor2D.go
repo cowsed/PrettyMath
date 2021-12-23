@@ -15,10 +15,16 @@ import (
 	workspace "github.com/cowsed/PrettyMath/Workspaces" //Workspaces
 )
 
+func init() {
+	fmt.Println("Registering 2d attractor")
+
+	workspace.RegisterWorkspace(Init, "2D Attractor")
+}
+
 //Workspace is the workspace for generating 2-dimensional Attracors
 type Workspace struct {
 	//Multi Threading stuff
-	processCreator                   func() chan workspace.ProgressUpdate
+	processCommCreator               func() chan workspace.ProgressUpdate
 	currentlyRenderingAsynchronously bool
 	asynchronouslyRenderedImage      *image.RGBA
 	decisionPopupShown               bool
@@ -84,11 +90,11 @@ type Workspace struct {
 }
 
 //Init creates a new 2d attractor workspace with default parameters
-func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdate) Workspace {
+func Init(onCloseFunc func(), processCreator func() chan workspace.ProgressUpdate) tools.Workspace {
 	gradient := tools.GradientInit()
 
-	return Workspace{
-		processCreator:     processCreator,
+	return &Workspace{
+		processCommCreator: processCreator,
 		decisionPopupShown: false,
 
 		amOpen:        true,
@@ -200,7 +206,7 @@ func (ws *Workspace) makeAnimation() {
 	ws.updateParams()
 	r := ws.makeRenderer()
 	animator := ws.selectedAnimation.deepCopy()
-	animator.makeFrames(int(ws.animationFrames), ws.animationFolder, r, ws.processCreator)
+	animator.makeFrames(int(ws.animationFrames), ws.animationFolder, r, ws.processCommCreator)
 }
 
 func (ws *Workspace) makeImageAsync() {

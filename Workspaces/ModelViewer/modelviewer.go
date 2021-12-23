@@ -7,11 +7,17 @@ import (
 	"github.com/AllenDang/giu/imgui"
 	"github.com/chewxy/math32"
 	tools "github.com/cowsed/PrettyMath/Tools"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
 
 	"github.com/AllenDang/giu"
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
 )
+
+//Register To Workspaces
+func init() {
+	workspace.RegisterWorkspace(Init, "Model Viewer")
+}
 
 //go:embed Shaders/example.frag
 var baseFragSource string
@@ -47,12 +53,12 @@ type Workspace struct {
 }
 
 //Init initializes a new plotter workspace
-func Init(onCloseFunc func()) Workspace {
+func Init(onCloseFunc func(), AddProcessComm func() chan workspace.ProgressUpdate) tools.Workspace {
 	ws := Workspace{
 		amOpen:  true,
 		onClose: onCloseFunc,
 		cameraPos: Vec3Param{
-			Value: [3]float32{4, 4, 0},
+			Value: [3]float32{8, 6, 0},
 			Name:  "Camera Position",
 			min:   -10000,
 			max:   10000,
@@ -73,17 +79,17 @@ func Init(onCloseFunc func()) Workspace {
 			step:  .01,
 		},
 		imageZoom:    1,
-		ambientLight: 1,
+		ambientLight: .7,
 		clearcolor:   []float32{1, 1, 1, 1},
 		Objects:      []Renderable{},
 	}
 	//mod := NewLoadedModel(0)
 	//mod.filename = "Workspaces/ModelViewer/Models/monkey.obj"
 	//mod.LoadFromFile()
-	mod := NewDiskGenerator(0)
-	mod.circlePoints = 20
+	mod := NewSquareGenerator(0)
 	mod.spinePoints = 20
-	mod.Function = "2"
+
+	mod.Function = "2+.5*cos(3.14159*x)"
 	mod.DrawWireframe = true
 	mod.CreateMesh()
 
@@ -112,6 +118,7 @@ func Init(onCloseFunc func()) Workspace {
 
 	var rbo uint32
 	gl.CreateRenderbuffers(1, &rbo)
+
 	gl.BindRenderbuffer(gl.RENDERBUFFER, rbo)
 	gl.RenderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, 1920, 1080)
 	gl.BindRenderbuffer(gl.RENDERBUFFER, 0)
@@ -123,7 +130,7 @@ func Init(onCloseFunc func()) Workspace {
 
 	ws.BuildProgram()
 
-	return ws
+	return &ws
 }
 
 func (ws *Workspace) CreateNewObject() {
@@ -133,6 +140,8 @@ func (ws *Workspace) CreateNewObject() {
 		newObject = NewLoadedModel(len(ws.Objects))
 	case 1:
 		newObject = NewDiskGenerator(len(ws.Objects))
+	case 2:
+		newObject = NewSquareGenerator(len(ws.Objects))
 	}
 	ws.Objects = append(ws.Objects, newObject)
 }
@@ -143,7 +152,7 @@ func (ws *Workspace) ToggleTurntable() {
 	}
 	fmt.Println(ws.cameraPos.Value)
 	ws.height = ws.cameraPos.Value[1]
-	v := mgl32.Vec2{ws.cameraPos.Value[0], ws.cameraPos.Value[2]}
+	v := mgl32.Vec2{ws.cameraPos.Value[0] - ws.lookatPos.Value[0], ws.cameraPos.Value[2] - ws.lookatPos.Value[2]}
 	ws.radius = v.Len()
 	ws.theta = -math32.Atan2(v[1], v[0])
 	fmt.Println(ws.radius, ws.theta, ws.height)
@@ -155,6 +164,14 @@ func (ws *Workspace) Build() {
 	//Close when necessary
 	if !ws.amOpen {
 		println("Closing\n\n\n\n\n\n\n")
+		for i := range ws.Objects {
+			ws.Objects[i].Dispose()
+		}
+		//Delete gl stuff
+		//Still a bit of a problem here when freeing as it seems not everything is freed
+		gl.DeleteFramebuffers(1, &ws.framebuffer)
+		gl.DeleteTextures(1, &ws.outputTex)
+		gl.DeleteProgram(ws.program)
 		ws.onClose()
 	}
 
@@ -164,7 +181,7 @@ func (ws *Workspace) Build() {
 		&ws.lookatPos,
 	)
 
-	Adder := giu.Combo("Create new Object", "From File", []string{"From File", "Function Define"}, &ws.NewObjectType).OnChange(ws.CreateNewObject)
+	Adder := giu.Combo("Create new Object", "From File", []string{"From File", "Function Defined Revolution", "Function Defined Square"}, &ws.NewObjectType).OnChange(ws.CreateNewObject)
 	var ObjectsUI giu.Widget = giu.Group()
 
 	if len(ws.Objects) > 0 {
@@ -176,10 +193,11 @@ func (ws *Workspace) Build() {
 
 	}
 
-	giu.TabItem("Plotter").Layout(
+	giu.TabItem("ModelViewer").Layout(
 		giu.SplitLayout("MainSplit", giu.DirectionHorizontal, true, 300,
 			giu.Group().Layout(
 				cameraControls,
+				giu.Label(fmt.Sprintf("ModelViewer Framebuf: %d. OutputTex: %d", ws.framebuffer, ws.outputTex)),
 				giu.Custom(func() {
 					tools.DragFloatN("Clear Color", ws.clearcolor, 0.01, 0, 1, "%f")
 
@@ -195,7 +213,7 @@ func (ws *Workspace) Build() {
 					w := size.X
 					var aspect float32 = 1920.0 / 1080.0
 					size2 := imgui.Vec2{X: w * ws.imageZoom, Y: w / aspect * ws.imageZoom}
-					imgui.ImageV(imgui.TextureID(ws.outputTex), size2, imgui.Vec2{0, 1}, imgui.Vec2{1, 0}, imgui.Vec4{1, 1, 1, 1}, imgui.Vec4{})
+					imgui.ImageV(imgui.TextureID(ws.outputTex), size2, imgui.Vec2{X: 0, Y: 1}, imgui.Vec2{X: 1, Y: 0}, imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1}, imgui.Vec4{})
 					//imgui.Image(imgui.TextureID(ws.outputTex))
 				}),
 			),

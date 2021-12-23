@@ -5,7 +5,13 @@ import (
 
 	"github.com/AllenDang/giu"
 	parser "github.com/cowsed/Parser"
+	tools "github.com/cowsed/PrettyMath/Tools"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
 )
+
+func init() {
+	workspace.RegisterWorkspace(Init, "2D Plotter")
+}
 
 type Workspace struct {
 	amOpen  bool
@@ -19,17 +25,17 @@ type Workspace struct {
 }
 
 //Init initializes a new plotter workspace
-func Init(onCloseFunc func()) Workspace {
+func Init(onCloseFunc func(), AddProcessComm func() chan workspace.ProgressUpdate) tools.Workspace {
 	ws := Workspace{
 		amOpen:        true,
 		onClose:       onCloseFunc,
-		equations:     []string{"sin(x)", "cos(x)"},
+		equations:     []string{"sin(x)", "cos(x)", "1", "-1"},
 		compiled:      []parser.Expression{},
 		equationsMade: []bool{},
 	}
 	ws.MakeSlicesToSize()
 
-	return ws
+	return &ws
 }
 
 func (ws *Workspace) UpdateExpressionAndGraph() {
@@ -50,15 +56,18 @@ func (ws *Workspace) CompileExpression(i int) error {
 	return nil
 }
 func (ws *Workspace) EvaluateExpressionRange(i int, min, max float64) ([]float64, []float64) {
-
 	var numPoints = 400
 	step := (max - min) / float64(numPoints)
 	xs := make([]float64, numPoints)
 	ys := make([]float64, numPoints)
+
 	j := 0
 	for x := min; x < max; x += step {
 		xs[j] = x
 		ys[j] = ws.compiled[i].Evaluate(map[string]float64{"x": x})
+		if ws.compiled[i] == nil {
+			return xs, ys
+		}
 		j++
 	}
 	return xs, ys

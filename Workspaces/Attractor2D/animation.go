@@ -82,10 +82,10 @@ func (rw *randomWalker) deepCopy() animationMaker {
 
 	return &randomWalker{false, 0.3, labels, enableds, rw.stepSize}
 }
-func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, processCreator func() chan workspace.ProgressUpdate) {
+func (rw *randomWalker) makeFrames(frameAmt int, outPath string, r renderer, processCommCreator func() chan workspace.ProgressUpdate) {
 
 	processDescription := fmt.Sprintf("Renders %d frames of a random walk through parameter space.\nBegan at {time}", frameAmt)
-	communicator := processCreator()
+	communicator := processCommCreator()
 	//mabye defer close(communicator)
 	go func() {
 		println("Making animation - goroutine")
