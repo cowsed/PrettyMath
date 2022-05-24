@@ -10,7 +10,7 @@ import (
 
 	// _ "github.com/cowsed/PrettyMath/Workspaces/OpenCL" //Doesn't work currently
 
-	ogl "github.com/cowsed/PrettyMath/Workspaces/OpenGL"
+	_ "github.com/cowsed/PrettyMath/Workspaces/OpenGL"
 
 	g "github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
@@ -32,14 +32,7 @@ func (NWS *NewWorkspace) Build() {
 				}
 			}
 		}),
-		g.Button("New OpenGL").OnClick(NWS.SetOpenGL),
 	).Build()
-}
-
-//SetPlot opens the plotting workspace
-func (c *NewWorkspace) SetOpenGL() {
-	p := ogl.Init(onClose)
-	CurrentWorkspaces = append(CurrentWorkspaces, &p)
 }
 
 //The closing function that gets passed to workspaces to remove themselves and replace themselves with the creation tab

@@ -241,6 +241,9 @@ type FloatParam struct {
 	Value          float32
 	Name           string
 	min, max, step float32
+	Animate        bool
+	Paused         bool
+	delta          float32
 }
 
 func (fp *FloatParam) GetName() string {
@@ -248,7 +251,17 @@ func (fp *FloatParam) GetName() string {
 }
 func (fp *FloatParam) Build() {
 	imgui.DragFloatV(fp.Name, &fp.Value, fp.step, fp.min, fp.max, "%.3f", 1)
+	imgui.SameLine()
+	imgui.Checkbox("Animated ## "+fp.Name, &fp.Animate)
+	if fp.Animate {
+		fp.Value += fp.delta //Add frame time
 
+		if imgui.Button("Restart ## " + fp.Name) {
+			fp.Value = 0
+		}
+		imgui.SameLine()
+		imgui.DragFloat("Delta## "+fp.Name, &fp.delta)
+	}
 	if imgui.BeginPopupContextItemV(fp.Name+" float", 1) {
 		imgui.BeginGroup()
 		id := "var: " + fp.Name + " : Float"

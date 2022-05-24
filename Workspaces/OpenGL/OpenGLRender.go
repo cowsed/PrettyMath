@@ -13,6 +13,8 @@ import (
 
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
+	tools "github.com/cowsed/PrettyMath/Tools"
+	workspace "github.com/cowsed/PrettyMath/Workspaces"
 	"github.com/go-gl/gl/v3.2-core/gl"
 )
 
@@ -26,13 +28,18 @@ var points []float32 = []float32{
 	1, -1, 0,
 }
 
+//Register To Workspaces
+func init() {
+	workspace.RegisterWorkspace(Init, "OpenGL Shader Editor")
+}
+
 //go:embed Shaders/example.frag
 var baseFragSource string
 
 //go:embed Shaders/example.vert
 var baseVertSource string
 
-func Init(onCloseFunc func()) Workspace {
+func Init(onCloseFunc func(), AddProcessComm func() chan workspace.ProgressUpdate) tools.Workspace {
 
 	ws := Workspace{
 		amOpen:     true,
@@ -87,7 +94,7 @@ func Init(onCloseFunc func()) Workspace {
 
 	ws.BuildProgram()
 
-	return ws
+	return &ws
 }
 
 type Workspace struct {
