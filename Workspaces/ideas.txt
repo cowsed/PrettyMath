@@ -6,9 +6,3 @@ modes:
 
 2D L-Systems
 3D L-systems
-maybe versions with colors
-
-Model viewer
-Displays model with some camera
-models made by loading or by functions
-interface that can be fulfilled by something that loads from file or can do revolves or extrudes like were doing with volume by slicing in calc

@@ -1,12 +1,18 @@
-# Fancy Math things
+# Pretty Math
+A selection of math visualizations/art-ish tools
+
+Uses Dear Imgui for gui
 
 ## Model Viewer
 Can load arbitrary obj files.
-Can generate a solid of revolution and calculate the volume. (Thanks BC Calc)
-Can generate a solid where the side length is determined by a function and cross sections perpendicular to the x-axis
+Can generate a solid of revolution and calculate the volume. 
+Can generate a solid of Extrusion where the side length is determined by a function and cross sections perpendicular to the x-axis and calculate volume
+
 
 ![Modelviewer Example Normals](https://github.com/cowsed/PrettyMath/blob/main/Gallery/ModelsNormal.png?raw=true)
+Normal Shaded generated solids
 ![Modelviewer Example Shaded](https://github.com/cowsed/PrettyMath/blob/main/Gallery/ModelsShaded.png?raw=true)
+Phong Shaded generated solids
 
 ## OpenGL Shader Editor
 Uniform editors
@@ -15,8 +21,6 @@ supports setting int, float, and vec3 uniforms
 renders to framebuffer and texture to be used in gui as a texture
 ![OpenGL Example](https://github.com/cowsed/PrettyMath/blob/main/Gallery/OpenGLExample1.png?raw=true)
 
-## OpenCL workspace
-Opencl pipeline  -  currently broken
 
 ## 2D attractors 
 in the form of
@@ -38,5 +42,3 @@ Features:
 
 
 
-Todo:
-Remake Plotting workspace so its actually useful
